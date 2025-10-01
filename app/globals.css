@@ -1,0 +1,4 @@
+@import "tailwindcss";
+:root { color-scheme: dark light; }
+html, body { min-height: 100dvh; }
+body { background: #0b0c0f; color: white; }
