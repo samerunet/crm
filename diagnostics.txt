@@ -1,0 +1,775 @@
+=== PATH & VERSIONS ===
+/Users/samijohn/Desktop/crm-db-starter
+v20.19.5
+10.8.2
+Next.js v15.5.4
+
+=== GIT ===
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   app/globals.css
+	modified:   app/layout.tsx
+	modified:   app/page.tsx
+	modified:   components/sections/hero.tsx
+	modified:   components/ui/navbar.tsx
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	components/sections/about.tsx
+	diagnostics.txt
+	public/placeholder/hero.png
+
+no changes added to commit (use "git add" and/or "git commit -a")
+origin	https://github.com/samerunet/crm.git (fetch)
+origin	https://github.com/samerunet/crm.git (push)
+
+=== TOP LEVEL ===
+total 504
+drwxr-xr-x@  21 samijohn  staff     672 Oct  2 20:00 .
+drwx------@  47 samijohn  staff    1504 Oct  2 20:00 ..
+-rw-r--r--@   1 samijohn  staff     183 Oct  1 00:35 .env.example
+-rw-r--r--@   1 samijohn  staff     183 Sep 30 17:40 .env.local
+drwxr-xr-x@  12 samijohn  staff     384 Oct  2 20:04 .git
+-rw-r--r--@   1 samijohn  staff      63 Oct  1 00:35 .gitignore
+drwxr-xr-x@  14 samijohn  staff     448 Oct  2 20:00 .next
+-rw-r--r--@   1 samijohn  staff    1030 Oct  1 00:35 README.md
+drwxr-xr-x@  11 samijohn  staff     352 Oct  2 19:37 app
+drwxr-xr-x@   4 samijohn  staff     128 Oct  2 19:55 components
+-rw-r--r--    1 samijohn  staff     846 Oct  2 20:04 diagnostics.txt
+drwxr-xr-x@   3 samijohn  staff      96 Sep 30 17:59 lib
+-rw-r--r--    1 samijohn  staff     262 Sep 30 17:40 next-env.d.ts
+-rw-r--r--@   1 samijohn  staff     129 Oct  1 00:35 next.config.ts
+drwxr-xr-x@ 289 samijohn  staff    9248 Oct  1 04:51 node_modules
+-rw-r--r--    1 samijohn  staff  216926 Sep 30 18:13 package-lock.json
+-rw-r--r--@   1 samijohn  staff     785 Oct  1 00:35 package.json
+-rw-r--r--@   1 samijohn  staff      63 Oct  1 00:35 postcss.config.mjs
+drwxr-xr-x@   6 samijohn  staff     192 Oct  1 04:40 prisma
+drwxr-xr-x@   3 samijohn  staff      96 Oct  2 19:45 public
+-rw-r--r--@   1 samijohn  staff     703 Sep 30 17:40 tsconfig.json
+
+=== KEY FOLDERS ===
+app:
+total 32
+drwxr-xr-x@ 11 samijohn  staff   352 Oct  2 19:37 .
+drwxr-xr-x@ 21 samijohn  staff   672 Oct  2 20:00 ..
+drwxr-xr-x@  4 samijohn  staff   128 Sep 30 17:59 api
+drwxr-xr-x@  3 samijohn  staff    96 Sep 30 18:00 auth
+drwxr-xr-x@  3 samijohn  staff    96 Sep 30 17:43 courses
+drwxr-xr-x@  3 samijohn  staff    96 Sep 30 17:43 dashboard
+-rw-r--r--@  1 samijohn  staff  5485 Oct  2 19:37 globals.css
+drwxr-xr-x@  3 samijohn  staff    96 Sep 30 17:43 guides
+-rw-r--r--@  1 samijohn  staff   603 Sep 30 18:16 layout.tsx
+-rw-r--r--@  1 samijohn  staff   315 Sep 30 21:03 page.tsx
+drwxr-xr-x@  3 samijohn  staff    96 Sep 30 17:43 portfolio
+
+components:
+total 0
+drwxr-xr-x@  4 samijohn  staff  128 Oct  2 19:55 .
+drwxr-xr-x@ 21 samijohn  staff  672 Oct  2 20:00 ..
+drwxr-xr-x@  6 samijohn  staff  192 Oct  2 19:55 sections
+drwxr-xr-x@  4 samijohn  staff  128 Oct  2 19:41 ui
+
+prisma:
+total 248
+drwxr-xr-x@  6 samijohn  staff     192 Oct  1 04:40 .
+drwxr-xr-x@ 21 samijohn  staff     672 Oct  2 20:00 ..
+-rw-r--r--   1 samijohn  staff  110592 Sep 30 18:01 dev.db
+-rw-r--r--   1 samijohn  staff    8720 Sep 30 18:01 dev.db-journal
+drwxr-xr-x@  4 samijohn  staff     128 Oct  1 01:46 migrations
+-rw-r--r--@  1 samijohn  staff    2715 Sep 30 18:00 schema.prisma
+
+public:
+total 0
+drwxr-xr-x@  3 samijohn  staff   96 Oct  2 19:45 .
+drwxr-xr-x@ 21 samijohn  staff  672 Oct  2 20:00 ..
+drwxr-xr-x@  9 samijohn  staff  288 Oct  2 19:45 placeholder
+
+=== app/layout.tsx ===
+// app/layout.tsx
+import "./globals.css";
+import type { Metadata } from "next";
+import Navbar from "@/components/ui/navbar";
+import Footer from "@/components/ui/footer";
+
+export const metadata: Metadata = {
+  title: "Fari Makeup — Bridal Makeup & Courses",
+  description: "Timeless bridal looks. Portfolio, courses, and booking.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" data-theme="fari-light" suppressHydrationWarning>
+      <body>
+        <Navbar />
+        {children}
+        <Footer />
+      </body>
+    </html>
+  );
+}
+
+=== app/page.tsx ===
+// app/page.tsx
+import Navbar from "@/components/ui/navbar";
+import HeroLanding from "@/components/sections/hero";
+
+export default function Page() {
+  return (
+    <main>
+      {/* If your layout already renders <Navbar />, remove the one below */}
+      {/* <Navbar /> */}
+      <HeroLanding />
+    </main>
+  );
+}
+
+=== components/sections/hero.tsx ===
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+
+export default function HeroLiquid() {
+  return (
+    <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-4 pb-24 md:pb-12">
+      {/* subtle backdrop ornaments */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div
+          className="absolute inset-x-0 -top-20 h-[140px] opacity-60 blur-2xl md:h-[180px]"
+          style={{ background: "radial-gradient(60% 60% at 50% 0%, rgba(176,137,104,.30), transparent 70%)" }}
+        />
+      </div>
+
+      {/* OUTER liquid-glass container */}
+      <div className="specular rounded-[22px] glass-2 overflow-hidden md:rounded-[28px]">
+        <div className="grid gap-0 md:grid-cols-2">
+          {/* LEFT: inner glass panel */}
+          <div className="order-2 p-4 sm:p-6 md:order-1 md:p-10">
+            <div className="specular glass rounded-[16px] p-4 sm:p-6 md:rounded-[20px]">
+              <h1
+                className="font-serif text-[30px] leading-[1.1] sm:text-[40px] md:text-[68px] font-semibold tracking-tight"
+                style={{ fontFamily: `"Playfair Display", ui-serif, Georgia, serif` }}
+              >
+                Luxury makeup artistry
+              </h1>
+
+              <p className="mt-2 text-[15px] sm:text-base md:text-lg text-muted-foreground">
+                Bridal · Glam · Editorial
+              </p>
+
+              {/* CTAs: 2x2 on mobile, 3 across on md+ */}
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
+                <Link
+                  href="/contact"
+                  className="col-span-2 rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground shadow hover:bg-accent transition md:col-span-1 md:rounded-xl md:px-5 md:py-3"
+                >
+                  Book Now
+                </Link>
+                <Link
+                  href="/portfolio"
+                  className="rounded-lg border border-border bg-card/70 backdrop-blur px-4 py-2.5 text-center text-sm font-medium hover:bg-accent/15 transition md:rounded-xl md:px-5 md:py-3"
+                >
+                  Portfolio
+                </Link>
+                <Link
+                  href="/services"
+                  className="rounded-lg border border-border bg-secondary/70 backdrop-blur px-4 py-2.5 text-center text-sm font-medium hover:bg-accent/15 transition md:rounded-xl md:px-5 md:py-3"
+                >
+                  Services
+                </Link>
+              </div>
+
+              {/* Lookbook strip (placeholder blocks; swap with images later) */}
+              <div className="mt-6 md:mt-7">
+                <h2
+                  className="font-serif text-xl font-semibold md:text-2xl"
+                  style={{ fontFamily: `"Playfair Display", ui-serif, Georgia, serif` }}
+                >
+                  Lookbook
+                </h2>
+                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                  Real brides and studio looks that photograph beautifully.
+                </p>
+
+                <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none]">
+                  <style jsx>{`div::-webkit-scrollbar{display:none}`}</style>
+
+                  {/* Replace these <div>s with <Image> cards when your lookbook photos are ready */}
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <a
+                      key={i}
+                      href="/portfolio"
+                      className="block shrink-0 w-[58%] rounded-xl border border-border bg-gradient-to-br from-[var(--card-2)] to-[var(--card)] backdrop-blur shadow sm:w-[42%] md:w-[160px]"
+                      style={{ boxShadow: "0 8px 26px rgba(0,0,0,0.14)" }}
+                    >
+                      <div className="aspect-[4/3] rounded-xl" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: portrait tuned for hero.png (378×660, transparent) */}
+          <div className="relative order-1 md:order-2">
+            <div
+              className="
+                relative
+                /* Use the image’s native portrait feel on mobile, widen on small tablets */
+                aspect-[378/660]      /* ≈0.573 — exact ratio from your PNG */
+                sm:aspect-[4/5]
+                /* Cap desktop height to avoid upscaling past the 660px source too much */
+                md:aspect-auto md:h-[600px]
+                lg:h-[660px]
+              "
+            >
+              <Image
+                src="/placeholder/hero.png"     /* <-- your file here */
+                alt="Fari Makeup hero"
+                fill
+                priority
+                quality={85}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
+                className="
+                  object-cover
+                  /* FOCAL POINT: center x, raise face slightly (tweak second value if needed) */
+                  object-[50%_30%]
+                "
+              />
+
+              {/* Because PNG has transparency, let the glass tint show through softly */}
+              <div
+                aria-hidden
+                className="absolute inset-0 rounded-[18px] md:rounded-[24px]"
+                style={{
+                  background:
+                    "linear-gradient(90deg, color-mix(in oklab, var(--background) 88%, transparent) 0%, rgba(0,0,0,0) 32%), radial-gradient(70% 80% at 0% 100%, color-mix(in oklab, var(--card) 70%, transparent) 0%, transparent 60%)",
+                  mixBlendMode: "multiply",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(0,0,0,.08)",
+                }}
+              />
+            </div>
+
+            {/* Floating chips (desktop only) */}
+            <div className="pointer-events-none absolute right-4 top-4 hidden gap-2 md:flex">
+              <span className="pointer-events-auto rounded-xl border border-border bg-foreground/80 px-3 py-1 text-xs text-background shadow">
+                @fari_makeup
+              </span>
+              <a
+                href="/contact"
+                className="pointer-events-auto rounded-xl border border-border bg-foreground/90 px-3 py-1.5 text-sm font-medium text-background shadow hover:bg-foreground transition"
+              >
+                Book Now
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile FAB (safe-area aware) */}
+      <a
+        href="/contact"
+        className="fixed bottom-[16px] right-[16px] z-40 rounded-full bg-foreground px-4 py-3 text-sm font-medium text-background shadow md:hidden"
+        style={{
+          paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
+          right: "calc(16px + env(safe-area-inset-right))",
+          bottom: "calc(16px + env(safe-area-inset-bottom))",
+        }}
+        aria-label="Book Now"
+      >
+        Book Now
+      </a>
+    </section>
+  );
+}
+
+=== components/sections/hero-liquid.tsx ===
+(no components/sections/hero-liquid.tsx)
+
+=== components/ui/navbar.tsx ===
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+const links = [
+  { href: "/", label: "Home" },
+  { href: "/portfolio", label: "Portfolio" },
+  { href: "/services", label: "Services" },
+  { href: "/contact", label: "Book Now" },
+];
+
+export default function Navbar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // close on route change or escape
+  useEffect(() => { setOpen(false); }, [pathname]);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  return (
+    <header className="sticky top-0 z-50 w-full bg-background/65 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+        {/* Brand */}
+        <Link href="/" className="text-lg font-semibold tracking-tight md:text-xl">
+          Fari Makeup
+        </Link>
+
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-7 text-sm md:flex">
+          {links.slice(0, 3).map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`opacity-80 transition hover:opacity-100 ${
+                pathname === l.href ? "underline underline-offset-4" : ""
+              }`}
+            >
+              {l.label}
+            </Link>
+          ))}
+          <Link
+            href="/contact"
+            className="rounded-xl border border-border bg-foreground/90 px-3 py-1.5 text-sm font-medium text-background shadow hover:bg-foreground transition"
+          >
+            Book Now
+          </Link>
+        </nav>
+
+        {/* Mobile actions */}
+        <div className="flex items-center gap-2 md:hidden">
+          <Link
+            href="/contact"
+            className="rounded-lg border border-border bg-foreground/90 px-2.5 py-1 text-xs font-medium text-background shadow"
+          >
+            Book
+          </Link>
+          <button
+            aria-label="Open menu"
+            aria-expanded={open}
+            onClick={() => setOpen(true)}
+            className="rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm shadow"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+
+      {/* Glass mobile sheet */}
+      {open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 md:hidden"
+          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+        >
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
+          <div
+            ref={sheetRef}
+            className="glass fixed inset-x-3 top-3 rounded-2xl p-3"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-base font-medium">Menu</span>
+              <button
+                aria-label="Close menu"
+                onClick={() => setOpen(false)}
+                className="rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm"
+              >
+                ✕
+              </button>
+            </div>
+            <nav className="mt-2 grid gap-1">
+              {links.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`rounded-lg px-3 py-3 text-[15px] hover:bg-accent/15 ${
+                    pathname === l.href ? "bg-accent/20" : ""
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+=== app/globals.css (top) ===
+@import "tailwindcss";
+
+/* Enable `.dark` variant like Tailwind/shadcn v4 expect */
+@custom-variant dark (&:is(.dark *));
+
+/* === 1) Your palette as CSS variables === */
+:root {
+  /* Surfaces */
+  --background: #F4EADD;  /* page bg */
+  --foreground: #2A201A;  /* espresso text */
+
+  --card: #E6D6C7;                 /* soft beige card bg */
+  --card-foreground: #2A201A;
+
+  --popover: #E6D6C7;
+  --popover-foreground: #2A201A;
+
+  /* Brand / UI */
+  --primary: #9C6644;              /* main CTA (Mocha) */
+  --primary-foreground: #ffffff;
+
+  --secondary: #D3BFA5;            /* chips/secondary */
+  --secondary-foreground: #2A201A;
+
+  --muted: #F4EADD;                /* subtle blocks */
+  --muted-foreground: #7F5539;     /* deep truffle subheads */
+
+  --accent: #B08968;               /* caramel hover/highlight */
+  --accent-foreground: #2A201A;
+
+  --destructive: #7F5539;
+  --destructive-foreground: #ffffff;
+
+  /* Lines/inputs */
+  --border: #CBB38A;               /* soft gold */
+  --input: #CBB38A;
+  --ring: #B08968;
+
+  /* Optional charts */
+  --chart-1: #9C6644;
+  --chart-2: #B08968;
+  --chart-3: #7F5539;
+  --chart-4: #D3BFA5;
+  --chart-5: #E6D6C7;
+
+  /* Radius */
+  --radius: 10px;
+}
+
+.dark {
+  --background: #11100F;
+  --foreground: #F4EADD;
+
+  --card: #2A201A;
+  --card-foreground: #F4EADD;
+
+  --popover: #2A201A;
+  --popover-foreground: #F4EADD;
+
+  --primary: #B08968;
+  --primary-foreground: #11100F;
+
+  --secondary: #1B1512;
+  --secondary-foreground: #F4EADD;
+
+  --muted: #1B1512;
+  --muted-foreground: #D3BFA5;
+
+  --accent: #9C6644;
+  --accent-foreground: #11100F;
+
+  --destructive: #7F5539;
+  --destructive-foreground: #F4EADD;
+
+  --border: #7F5539;
+  --input: #7F5539;
+  --ring: #B08968;
+}
+
+/* === 2) Map CSS vars -> Tailwind tokens (required) === */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* === 3) Base layer that applies the theme === */
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* --- Liquid glass helpers --- */
+.glass {
+    background: color-mix(in oklab, var(--card) 65%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+    box-shadow: 0 12px 50px rgba(0,0,0,.14);
+  }
+  .glass-2 {
+    background: color-mix(in oklab, var(--background) 45%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    backdrop-filter: blur(28px) saturate(130%);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
+    box-shadow: 0 20px 60px rgba(0,0,0,.16);
+  }
+  /* Soft hairline highlight for “specular” edge */
+  .specular {
+    position: relative;
+  }
+  .specular::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
+      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
+    mix-blend-mode: screen;
+    opacity: .55;
+  }
+/* --- Liquid glass helpers --- */
+.glass {
+    background: color-mix(in oklab, var(--card) 65%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+    box-shadow: 0 12px 50px rgba(0,0,0,.14);
+  }
+  .glass-2 {
+    background: color-mix(in oklab, var(--background) 45%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    backdrop-filter: blur(28px) saturate(130%);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
+    box-shadow: 0 20px 60px rgba(0,0,0,.16);
+  }
+  /* soft “specular” highlights around edges */
+  .specular { position: relative; }
+  .specular::before {
+    content: "";
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
+      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
+    mix-blend-mode: screen; opacity: .55;
+  }
+    
+=== app/globals.css (end) ===
+  --secondary-foreground: #F4EADD;
+
+  --muted: #1B1512;
+  --muted-foreground: #D3BFA5;
+
+  --accent: #9C6644;
+  --accent-foreground: #11100F;
+
+  --destructive: #7F5539;
+  --destructive-foreground: #F4EADD;
+
+  --border: #7F5539;
+  --input: #7F5539;
+  --ring: #B08968;
+}
+
+/* === 2) Map CSS vars -> Tailwind tokens (required) === */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* === 3) Base layer that applies the theme === */
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* --- Liquid glass helpers --- */
+.glass {
+    background: color-mix(in oklab, var(--card) 65%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+    box-shadow: 0 12px 50px rgba(0,0,0,.14);
+  }
+  .glass-2 {
+    background: color-mix(in oklab, var(--background) 45%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    backdrop-filter: blur(28px) saturate(130%);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
+    box-shadow: 0 20px 60px rgba(0,0,0,.16);
+  }
+  /* Soft hairline highlight for “specular” edge */
+  .specular {
+    position: relative;
+  }
+  .specular::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
+      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
+    mix-blend-mode: screen;
+    opacity: .55;
+  }
+/* --- Liquid glass helpers --- */
+.glass {
+    background: color-mix(in oklab, var(--card) 65%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+    box-shadow: 0 12px 50px rgba(0,0,0,.14);
+  }
+  .glass-2 {
+    background: color-mix(in oklab, var(--background) 45%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    backdrop-filter: blur(28px) saturate(130%);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
+    box-shadow: 0 20px 60px rgba(0,0,0,.16);
+  }
+  /* soft “specular” highlights around edges */
+  .specular { position: relative; }
+  .specular::before {
+    content: "";
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
+      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
+    mix-blend-mode: screen; opacity: .55;
+  }
+    
+=== postcss.config.mjs ===
+export default {
+  plugins: { "@tailwindcss/postcss": {} },
+};
+
+=== next.config.ts ===
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true
+};
+
+export default nextConfig;
+
+=== package.json ===
+{
+  "name": "crm",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "framer-motion": "^12.23.22",
+    "next": "15.5.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "prisma": "^5.20.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+
+=== Images in /public/placeholder ===
+total 560
+drwxr-xr-x@ 9 samijohn  staff     288 Oct  2 19:45 .
+drwxr-xr-x@ 3 samijohn  staff      96 Oct  2 19:45 ..
+-rw-r--r--@ 1 samijohn  staff       0 Oct  1 00:35 1.jpg
+-rw-r--r--@ 1 samijohn  staff       0 Oct  1 00:35 2.jpg
+-rw-r--r--@ 1 samijohn  staff       0 Oct  1 00:35 3.jpg
+-rw-r--r--@ 1 samijohn  staff       0 Oct  1 00:35 4.jpg
+-rw-r--r--@ 1 samijohn  staff       0 Oct  1 00:35 5.jpg
+-rw-r--r--@ 1 samijohn  staff       0 Oct  1 00:35 6.jpg
+-rw-r--r--  1 samijohn  staff  284716 Oct  2 19:45 hero.png

@@ -1,20 +1,24 @@
+// app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
+import { BookingProvider } from "@/components/ui/booking-provider";
 
 export const metadata: Metadata = {
-  title: "Makeup Artist — Portfolio & Courses",
-  description: "Showcase weddings, convert bookings, and sell courses/guides.",
+  title: "Fari Makeup — Bridal Makeup & Courses",
+  description: "Timeless bridal looks. Portfolio, courses, and booking.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="fari-light" suppressHydrationWarning>
       <body>
-        <Navbar />
-        {children}
-        <Footer />
+        <BookingProvider>
+          <Navbar />
+          {children}
+          <Footer />
+        </BookingProvider>
       </body>
     </html>
   );

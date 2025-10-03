@@ -1,4 +1,183 @@
 @import "tailwindcss";
-:root { color-scheme: dark light; }
-html, body { min-height: 100dvh; }
-body { background: #0b0c0f; color: white; }
+
+/* Enable `.dark` variant like Tailwind/shadcn v4 expect */
+@custom-variant dark (&:is(.dark *));
+
+/* === 1) Your palette as CSS variables === */
+:root {
+  /* Surfaces */
+  --background: #F4EADD;  /* page bg */
+  --foreground: #2A201A;  /* espresso text */
+
+  --card: #E6D6C7;                 /* soft beige card bg */
+  --card-foreground: #2A201A;
+
+  --popover: #E6D6C7;
+  --popover-foreground: #2A201A;
+
+  /* Brand / UI */
+  --primary: #9C6644;              /* main CTA (Mocha) */
+  --primary-foreground: #ffffff;
+
+  --secondary: #D3BFA5;            /* chips/secondary */
+  --secondary-foreground: #2A201A;
+
+  --muted: #F4EADD;                /* subtle blocks */
+  --muted-foreground: #7F5539;     /* deep truffle subheads */
+
+  --accent: #B08968;               /* caramel hover/highlight */
+  --accent-foreground: #2A201A;
+
+  --destructive: #7F5539;
+  --destructive-foreground: #ffffff;
+
+  /* Lines/inputs */
+  --border: #CBB38A;               /* soft gold */
+  --input: #CBB38A;
+  --ring: #B08968;
+
+  /* Optional charts */
+  --chart-1: #9C6644;
+  --chart-2: #B08968;
+  --chart-3: #7F5539;
+  --chart-4: #D3BFA5;
+  --chart-5: #E6D6C7;
+
+  /* Radius */
+  --radius: 10px;
+}
+
+.dark {
+  --background: #11100F;
+  --foreground: #F4EADD;
+
+  --card: #2A201A;
+  --card-foreground: #F4EADD;
+
+  --popover: #2A201A;
+  --popover-foreground: #F4EADD;
+
+  --primary: #B08968;
+  --primary-foreground: #11100F;
+
+  --secondary: #1B1512;
+  --secondary-foreground: #F4EADD;
+
+  --muted: #1B1512;
+  --muted-foreground: #D3BFA5;
+
+  --accent: #9C6644;
+  --accent-foreground: #11100F;
+
+  --destructive: #7F5539;
+  --destructive-foreground: #F4EADD;
+
+  --border: #7F5539;
+  --input: #7F5539;
+  --ring: #B08968;
+}
+
+/* === 2) Map CSS vars -> Tailwind tokens (required) === */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* === 3) Base layer that applies the theme === */
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* --- Liquid glass helpers --- */
+.glass {
+    background: color-mix(in oklab, var(--card) 65%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+    box-shadow: 0 12px 50px rgba(0,0,0,.14);
+  }
+  .glass-2 {
+    background: color-mix(in oklab, var(--background) 45%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    backdrop-filter: blur(28px) saturate(130%);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
+    box-shadow: 0 20px 60px rgba(0,0,0,.16);
+  }
+  /* Soft hairline highlight for “specular” edge */
+  .specular {
+    position: relative;
+  }
+  .specular::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
+      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
+    mix-blend-mode: screen;
+    opacity: .55;
+  }
+/* --- Liquid glass helpers --- */
+.glass {
+    background: color-mix(in oklab, var(--card) 65%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+    box-shadow: 0 12px 50px rgba(0,0,0,.14);
+  }
+  .glass-2 {
+    background: color-mix(in oklab, var(--background) 45%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    backdrop-filter: blur(28px) saturate(130%);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
+    box-shadow: 0 20px 60px rgba(0,0,0,.16);
+  }
+  /* soft “specular” highlights around edges */
+  .specular { position: relative; }
+  .specular::before {
+    content: "";
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
+      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
+    mix-blend-mode: screen; opacity: .55;
+  }
+    
