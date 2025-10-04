@@ -27,67 +27,74 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background/65 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-        {/* Brand */}
-        <Link href="/" className="text-lg font-semibold tracking-tight md:text-xl">
-          Fari Makeup
-        </Link>
+    <header className="sticky top-0 z-50 w-full">
+      {/* liquid glass bar */}
+      <div className="glass specular border-b border-border/70 bg-background/65 backdrop-blur">
+        <div className="f-container flex h-14 items-center justify-between">
+          {/* Brand */}
+          <Link href="/" className="text-lg font-semibold tracking-tight md:text-xl">
+            Fari Makeup
+          </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-7 text-sm md:flex">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={[
-                "rounded-xl border border-transparent px-2 py-1 transition",
-                "hover:bg-card/70 hover:border-border hover:backdrop-blur",
-                pathname === l.href ? "underline underline-offset-4" : "opacity-80 hover:opacity-100",
-              ].join(" ")}
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-7 text-sm md:flex">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={[
+                  "rounded-xl border border-transparent px-2 py-1 transition",
+                  "hover:bg-card/70 hover:border-border hover:backdrop-blur",
+                  pathname === l.href ? "underline underline-offset-4" : "opacity-80 hover:opacity-100",
+                ].join(" ")}
+              >
+                {l.label}
+              </Link>
+            ))}
+            <button
+              onClick={() => booking.open({ id: "general", title: "General Inquiry" })}
+              className="rounded-xl border border-border bg-foreground/90 px-3 py-1.5 text-sm font-medium text-background shadow transition hover:bg-foreground"
             >
-              {l.label}
-            </Link>
-          ))}
-          <button
-            onClick={() => booking.open({ id: "general", title: "General Inquiry" })}
-            className="rounded-xl border border-border bg-foreground/90 px-3 py-1.5 text-sm font-medium text-background shadow transition hover:bg-foreground"
-          >
-            Book Now
-          </button>
-        </nav>
+              Book Now
+            </button>
+          </nav>
 
-        {/* Mobile actions */}
-        <div className="flex items-center gap-2 md:hidden">
-          <button
-            onClick={() => booking.open({ id: "general", title: "General Inquiry" })}
-            className="rounded-lg border border-border bg-foreground/90 px-2.5 py-1 text-xs font-medium text-background shadow"
-          >
-            Book
-          </button>
-          <button
-            aria-label="Open menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(true)}
-            className="rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm shadow"
-          >
-            ☰
-          </button>
+          {/* Mobile actions */}
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              onClick={() => booking.open({ id: "general", title: "General Inquiry" })}
+              className="rounded-lg border border-border bg-foreground/90 px-2.5 py-1 text-xs font-medium text-background shadow"
+            >
+              Book
+            </button>
+            <button
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(true)}
+              className="rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm shadow"
+            >
+              ☰
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile glass sheet */}
+      {/* Mobile glass sheet — centered */}
       {menuOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 md:hidden"
+          className="fixed inset-0 z-50 md:hidden flex items-start justify-center p-3"
           onClick={(e) => e.target === e.currentTarget && setMenuOpen(false)}
         >
+          {/* dim + blur backdrop */}
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
+
+          {/* centered card (respects safe areas, max width) */}
           <div
             ref={sheetRef}
-            className="glass fixed inset-x-3 top-3 rounded-2xl p-3"
+            className="glass specular relative z-10 w-full max-w-md rounded-2xl p-3"
+            style={{ marginTop: "max(0.75rem, env(safe-area-inset-top))" }}
           >
             <div className="flex items-center justify-between">
               <span className="text-base font-medium">Menu</span>
@@ -99,6 +106,7 @@ export default function Navbar() {
                 ✕
               </button>
             </div>
+
             <nav className="mt-2 grid gap-1">
               {links.map((l) => (
                 <Link

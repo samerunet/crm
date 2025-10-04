@@ -1,23 +1,31 @@
 // prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"          // using SQLite locally
-  url      = "file:./dev.db"
+  // SQLite locally; you can switch to "postgresql" later by
+  // changing provider + DATABASE_URL in .env and running a migrate
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id            String   @id @default(cuid())
-  email         String   @unique
+  email         String?  @unique
   name          String?
   image         String?
-  role          String   @default("USER")     // was: Role
+
+  // Roles: keep as STRING for SQLite compatibility ("USER" | "ADMIN")
+  role          String   @default("USER")
+
+  // Relations (Auth.js + commerce)
   accounts      Account[]
   sessions      Session[]
   enrollments   Enrollment[]
   orders        Order[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -28,12 +36,17 @@ model Account {
   provider          String
   providerAccountId String
   type              String
+
+  // Optional OAuth token fields (kept optional for portability)
   access_token      String?
   refresh_token     String?
   expires_at        Int?
   token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -43,7 +56,8 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user User    @relation(fields: [userId], references: [id])
+
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Course {
@@ -53,7 +67,9 @@ model Course {
   description String
   priceCents  Int      @default(0)
   published   Boolean  @default(false)
+
   enrollments Enrollment[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -65,7 +81,9 @@ model Guide {
   description String
   priceCents  Int      @default(0)
   published   Boolean  @default(false)
+
   orders      Order[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -76,8 +94,8 @@ model Enrollment {
   courseId  String
   createdAt DateTime @default(now())
 
-  user   User   @relation(fields: [userId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -88,12 +106,12 @@ model Order {
   guideId      String?
   amountCents  Int
   currency     String   @default("usd")
-  status       String   @default("PENDING")  // was: OrderStatus
+  status       String   @default("PENDING") // keep string for SQLite
   externalRef  String?
   createdAt    DateTime @default(now())
 
-  user  User?  @relation(fields: [userId], references: [id])
-  guide Guide? @relation(fields: [guideId], references: [id])
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guide Guide? @relation(fields: [guideId], references: [id], onDelete: SetNull)
 }
 
 model Lead {

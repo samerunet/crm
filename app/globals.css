@@ -3,49 +3,62 @@
 /* Enable `.dark` variant like Tailwind/shadcn v4 expect */
 @custom-variant dark (&:is(.dark *));
 
-/* === 1) Your palette as CSS variables === */
+/* === 1) Palette as CSS variables === */
+/* === Light theme palette (2 shades darker) === */
+/* === Light theme palette (3–4 shades darker) === */
+/* === Light theme palette (darker + differentiated) === */
 :root {
-  /* Surfaces */
-  --background: #F4EADD;  /* page bg */
-  --foreground: #2A201A;  /* espresso text */
+  /* Base surface (page) — deeper, cozy beige */
+  --background: #B2997A;          /* darker page bg */
+  --foreground: #120D0A;          /* deep espresso for strong contrast */
 
-  --card: #E6D6C7;                 /* soft beige card bg */
-  --card-foreground: #2A201A;
+  /* Raised surfaces — a bit lighter than background to separate visually */
+  --card: #C7B39C;                /* lifted card surface */
+  --card-foreground: #120D0A;
 
-  --popover: #E6D6C7;
-  --popover-foreground: #2A201A;
+  --popover: #CBB9A4;             /* very slightly lighter than card */
+  --popover-foreground: #120D0A;
 
-  /* Brand / UI */
-  --primary: #9C6644;              /* main CTA (Mocha) */
-  --primary-foreground: #ffffff;
+  /* Brand / actions */
+  --primary: #6C3A22;             /* rich mocha (buttons/CTAs) */
+  --primary-foreground: #FFFFFF;
 
-  --secondary: #D3BFA5;            /* chips/secondary */
-  --secondary-foreground: #2A201A;
+  --secondary: #9D7E60;           /* distinct taupe-brown for chips/secondary */
+  --secondary-foreground: #120D0A;
 
-  --muted: #F4EADD;                /* subtle blocks */
-  --muted-foreground: #7F5539;     /* deep truffle subheads */
+  /* Subtle blocks & small text */
+  --muted: #BCA78D;               /* subtle sections / pills */
+  --muted-foreground: #523620;     /* truffle subheads */
 
-  --accent: #B08968;               /* caramel hover/highlight */
-  --accent-foreground: #2A201A;
+  /* Highlights / hovers */
+  --accent: #8B6547;              /* toffee highlight for hovers */
+  --accent-foreground: #120D0A;
 
-  --destructive: #7F5539;
-  --destructive-foreground: #ffffff;
+  /* Destructive */
+  --destructive: #5A3725;
+  --destructive-foreground: #FFFFFF;
 
-  /* Lines/inputs */
-  --border: #CBB38A;               /* soft gold */
-  --input: #CBB38A;
-  --ring: #B08968;
+  /* Lines / inputs — deeper bronze so edges read clearly */
+  --border: #8A6E4D;
+  --input:  #8A6E4D;
+  --ring:   #8B6547;              /* focus ring aligns with accent */
 
-  /* Optional charts */
-  --chart-1: #9C6644;
-  --chart-2: #B08968;
-  --chart-3: #7F5539;
-  --chart-4: #D3BFA5;
-  --chart-5: #E6D6C7;
+  /* Optional charts (harmonized) */
+  --chart-1: #6C3A22;
+  --chart-2: #8B6547;
+  --chart-3: #5A3725;
+  --chart-4: #9D7E60;
+  --chart-5: #C7B39C;
 
-  /* Radius */
+  /* Radius (unchanged) */
   --radius: 10px;
+
+  /* (Optional) differentiated “surfaces” you can use per section */
+  --surface-1: var(--background); /* page */
+  --surface-2: var(--card);       /* cards */
+  --surface-3: var(--popover);    /* overlays/sheets */
 }
+
 
 .dark {
   --background: #11100F;
@@ -77,7 +90,7 @@
   --ring: #B08968;
 }
 
-/* === 2) Map CSS vars -> Tailwind tokens (required) === */
+/* === 2) Map CSS vars -> Tailwind tokens === */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -125,59 +138,56 @@
   body { @apply bg-background text-foreground; }
 }
 
-/* --- Liquid glass helpers --- */
+/* === 4) Liquid glass helpers (iOS-like) === */
 .glass {
-    background: color-mix(in oklab, var(--card) 65%, transparent);
-    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-    backdrop-filter: blur(18px) saturate(120%);
-    -webkit-backdrop-filter: blur(18px) saturate(120%);
-    box-shadow: 0 12px 50px rgba(0,0,0,.14);
-  }
-  .glass-2 {
-    background: color-mix(in oklab, var(--background) 45%, transparent);
-    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-    backdrop-filter: blur(28px) saturate(130%);
-    -webkit-backdrop-filter: blur(28px) saturate(130%);
-    box-shadow: 0 20px 60px rgba(0,0,0,.16);
-  }
-  /* Soft hairline highlight for “specular” edge */
-  .specular {
-    position: relative;
-  }
-  .specular::before {
-    content: "";
-    position: absolute; inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
-      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
-    mix-blend-mode: screen;
-    opacity: .55;
-  }
-/* --- Liquid glass helpers --- */
-.glass {
-    background: color-mix(in oklab, var(--card) 65%, transparent);
-    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-    backdrop-filter: blur(18px) saturate(120%);
-    -webkit-backdrop-filter: blur(18px) saturate(120%);
-    box-shadow: 0 12px 50px rgba(0,0,0,.14);
-  }
-  .glass-2 {
-    background: color-mix(in oklab, var(--background) 45%, transparent);
-    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-    backdrop-filter: blur(28px) saturate(130%);
-    -webkit-backdrop-filter: blur(28px) saturate(130%);
-    box-shadow: 0 20px 60px rgba(0,0,0,.16);
-  }
-  /* soft “specular” highlights around edges */
-  .specular { position: relative; }
-  .specular::before {
-    content: "";
-    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
-      linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
-    mix-blend-mode: screen; opacity: .55;
-  }
-    
+  background: color-mix(in oklab, var(--card) 65%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: 0 12px 50px rgba(0,0,0,.14);
+}
+.glass-2 {
+  background: color-mix(in oklab, var(--background) 45%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  backdrop-filter: blur(28px) saturate(130%);
+  -webkit-backdrop-filter: blur(28px) saturate(130%);
+  box-shadow: 0 20px 60px rgba(0,0,0,.16);
+}
+/* soft “specular” highlights around edges */
+.specular { position: relative; }
+.specular::before {
+  content: "";
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 35%) top/100% 60% no-repeat,
+    linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.1) 60%, rgba(255,255,255,0)) left/60% 100% no-repeat;
+  mix-blend-mode: screen; opacity: .55;
+}
+
+/* === 5) Shared layout helpers (align all sections) === */
+.f-container {
+  width: 100%;
+  max-width: 86rem;          /* matches wide hero */
+  margin-inline: auto;
+  padding-inline: 1rem;      /* 16px */
+}
+@media (min-width: 640px) {  /* sm */
+  .f-container { padding-inline: 1.5rem; } /* 24px */
+}
+
+.section-y {
+  padding-block: 2rem;       /* 32px */
+}
+@media (min-width: 768px) {  /* md */
+  .section-y { padding-block: 3rem; } /* 48px */
+}
+/* shared container used by hero & about */
+.f-container {
+  /* same as you used in hero */
+  max-width: 86rem;     /* ~1376px */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;   /* px-4 */
+  padding-right: 1rem;
+}
+@media (min-width: 640px){ .f-container { padding-left: 1.5rem; padding-right: 1.5rem; } } /* sm:px-6 */
