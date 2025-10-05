@@ -3,7 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
-import AppProviders from "@/components/ui/app-providers";
+import { BookingProvider } from "@/components/ui/booking-provider";
 
 export const metadata: Metadata = {
   title: "Fari Makeup — Bridal Makeup & Courses",
@@ -14,11 +14,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-theme="fari-light" suppressHydrationWarning>
       <body>
-        <AppProviders>
+        <BookingProvider>
           <Navbar />
           {children}
           <Footer />
-        </AppProviders>
+        </BookingProvider>
       </body>
     </html>
   );
