@@ -1,3 +1,4 @@
+import 'react-big-calendar/lib/css/react-big-calendar.css'
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";

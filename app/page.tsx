@@ -1,8 +1,7 @@
-// app/page.tsx
+// FILE: app/page.tsx  (REPLACE ENTIRE FILE)
 import AboutFari from "@/components/sections/about";
-import BookingBanner from "@/components/sections/booking-banner";
-import HeroLanding from "@/components/sections/hero"; // now gallery-only
 import Link from "next/link";
+import { InstagramIcon } from "@/components/ui/icons";
 
 export default function Page() {
   const jsonLd = {
@@ -24,28 +23,32 @@ export default function Page() {
         <AboutFari />
       </section>
 
-      {/* CTA BANNER */}
-      <div className="mt-6">
-        <BookingBanner />
-      </div>
-
-      {/* HERO BELOW ABOUT — now the gallery */}
-      <section className="mt-8">
-        <HeroLanding />
-      </section>
-
-      {/* INSTAGRAM STRIP (kept aligned with same shell) */}
+      {/* INSTAGRAM STRIP — minimal, matches navbar style */}
       <section className="relative f-container pb-14">
-        <div className="specular glass-2 overflow-hidden rounded-[22px] md:rounded-[28px] -mx-3 sm:-mx-6">
-          <div className="p-4 sm:p-6">
-            <div className="specular glass rounded-[14px] p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm sm:text-base">See recent work on Instagram</p>
+        {/* Transparent outer; only inner row has the liquid-glass feel */}
+        <div className="rounded-2xl">
+          <div className="glass-2 specular rounded-2xl border border-border/60 p-4 sm:p-5 shadow-[0_16px_50px_rgba(0,0,0,0.14)]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card/70">
+                  <InstagramIcon className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm sm:text-base font-medium tracking-wide">
+                    Follow on Instagram
+                  </h3>
+                  <p className="text-xs text-muted-foreground">@fari_makeup</p>
+                </div>
+              </div>
+
               <Link
                 href="https://www.instagram.com/fari_makeup/"
                 target="_blank"
-                className="rounded-xl border border-border bg-secondary px-4 py-2 text-sm font-medium backdrop-blur transition hover:bg-accent/15"
+                rel="noopener"
+                className="inline-flex h-10 items-center rounded-md px-4 text-sm font-medium border border-border/70 bg-card/70 hover:bg-accent/20 transition"
+                aria-label="Open Instagram profile @fari_makeup"
               >
-                @fari_makeup
+                Open Instagram
               </Link>
             </div>
           </div>

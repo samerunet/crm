@@ -1,139 +1,285 @@
-// components/ui/navbar.tsx
-"use client";
+// FILE: components/ui/navbar.tsx  (REPLACE ENTIRE FILE)
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { useBooking } from "./booking-provider";
+import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useBooking } from '@/components/ui/booking-provider';
 
-const links = [
-  { href: "/", label: "Home" },
-  { href: "/portfolio", label: "Portfolio" },
-  { href: "/services", label: "Services" },
-];
+type Tab = { href: string; label: string };
+
+function MobileDrawer({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (!mounted) return;
+    const prev = document.documentElement.style.overflow;
+    if (open) document.documentElement.style.overflow = 'hidden';
+    return () => { document.documentElement.style.overflow = prev; };
+  }, [open, mounted]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.65)',
+          opacity: open ? 1 : 0,
+          transition: 'opacity 200ms ease',
+          pointerEvents: open ? 'auto' : 'none',
+          zIndex: 99998,
+        }}
+      />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          height: '100%',
+          width: '80vw',
+          maxWidth: 320,
+          backgroundColor: 'rgba(203,185,164,0.96)',
+          color: '#120D0A',
+          WebkitBackdropFilter: 'blur(26px) saturate(125%)',
+          backdropFilter: 'blur(26px) saturate(125%)',
+          borderLeft: '1px solid var(--border)',
+          boxShadow: '0 22px 70px rgba(0,0,0,.28)',
+          transform: open ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 280ms cubic-bezier(.2,.8,.2,1)',
+          zIndex: 99999,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '1rem', borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <div style={{ fontWeight: 600 }}>Menu</div>
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            style={{
+              height: 36, width: 36, display: 'grid', placeItems: 'center',
+              borderRadius: 10, background: 'rgba(18,13,10,0.15)',
+              color: '#120D0A', border: '1px solid var(--border)',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ padding: '0.75rem', display: 'grid', gap: '0.25rem', flex: 1, overflowY: 'auto' }}>
+          {children}
+        </div>
+      </aside>
+    </>,
+    document.body
+  );
+}
 
 export default function Navbar() {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session;
+  const role = (session?.user as any)?.role ?? 'USER';
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const booking = useBooking();
 
-  // close mobile sheet on route change or ESC
-  useEffect(() => setMenuOpen(false), [pathname]);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  // Order + labels per request (Education -> Reviews, add Home first)
+  const tabs: Tab[] = useMemo(
+    () => [
+      { href: '/',           label: 'Home' },
+      { href: '/services',   label: 'Services' },
+      { href: '/portfolio',  label: 'Portfolio' },
+      { href: '/courses',    label: 'Reviews' }, // points to existing /courses route for now
+      { href: '/faq',        label: 'FAQ' },
+      { href: '/about',      label: 'About' },
+    ],
+    []
+  );
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname === href || pathname.startsWith(href + '/');
+  };
+
+  const dashboardHref = role === 'ADMIN' ? '/admin' : '/dashboard';
 
   return (
-    <header className="sticky top-0 z-50 w-full">
-      {/* liquid glass bar */}
-      <div className="glass specular border-b border-border/70 bg-background/65 backdrop-blur">
-        <div className="f-container flex h-14 items-center justify-between">
-          {/* Brand */}
-          <Link href="/" className="text-lg font-semibold tracking-tight md:text-xl">
-            Fari Makeup
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/65 backdrop-blur">
+      <nav className="f-container py-2 sm:py-3" aria-label="Primary">
+        <div className="flex items-center justify-between gap-3">
+          {/* Brand → home */}
+          <Link href="/" className="inline-flex items-center" aria-label="Home">
+            <Image
+              src="/placeholder/logo.svg"
+              alt="Fari Makeup"
+              width={280}
+              height={100}
+              priority
+              className="h-12 sm:h-14 w-auto"
+            />
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden items-center gap-7 text-sm md:flex">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={[
-                  "rounded-xl border border-transparent px-2 py-1 transition",
-                  "hover:bg-card/70 hover:border-border hover:backdrop-blur",
-                  pathname === l.href ? "underline underline-offset-4" : "opacity-80 hover:opacity-100",
-                ].join(" ")}
-              >
-                {l.label}
-              </Link>
-            ))}
-            <button
-              onClick={() => booking.open({ id: "general", title: "General Inquiry" })}
-              className="rounded-xl border border-border bg-foreground/90 px-3 py-1.5 text-sm font-medium text-background shadow transition hover:bg-foreground"
-            >
-              Book Now
-            </button>
-          </nav>
+          {/* Desktop tabs (more rectangular glass, slightly larger text) */}
+          <div className="hidden lg:flex items-center gap-1">
+            <div className="glass-strong rounded-xl px-2 py-1">
+              <ul className="flex items-center gap-1">
+                {tabs.map((t) => (
+                  <li key={t.label}>
+                    <Link
+                      href={t.href}
+                      aria-current={isActive(t.href) ? 'page' : undefined}
+                      className={[
+                        'inline-flex h-10 items-center rounded-lg px-3 text-[14px] tracking-wide',
+                        isActive(t.href)
+                          ? 'bg-primary/15 text-foreground border border-border/60'
+                          : 'text-foreground/90 hover:bg-accent/15',
+                      ].join(' ')}
+                    >
+                      {t.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
 
-          {/* Mobile actions */}
-          <div className="flex items-center gap-2 md:hidden">
+          {/* Right controls */}
+          <div className="flex items-center gap-2">
+            {!isLoggedIn ? (
+              <Link
+                href="/auth/sign-in"
+                className="hidden lg:inline-flex h-10 items-center rounded-lg px-3 border border-border/70 bg-card/70 text-foreground hover:bg-accent/15"
+              >
+                Sign in
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href={dashboardHref}
+                  className="hidden lg:inline-flex h-10 items-center rounded-lg px-3 border border-border/70 bg-card/70 text-foreground hover:bg-accent/15"
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="hidden lg:inline-flex h-10 items-center rounded-lg px-3 border border-border/70 bg-card/70 text-foreground hover:bg-accent/15"
+                >
+                  Log out
+                </button>
+              </>
+            )}
+
+            {/* Global Book NOW */}
             <button
-              onClick={() => booking.open({ id: "general", title: "General Inquiry" })}
-              className="rounded-lg border border-border bg-foreground/90 px-2.5 py-1 text-xs font-medium text-background shadow"
+              onClick={() => booking.open()}
+              className="inline-flex h-10 items-center rounded-lg px-4 gbtn transition-transform hover:scale-[1.02] active:scale-[0.99] specular"
+              type="button"
             >
-              Book
+              Book now
             </button>
+
+            {/* Hamburger (mobile) */}
             <button
               aria-label="Open menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen(true)}
-              className="rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm shadow"
+              aria-expanded={open}
+              onClick={() => setOpen(true)}
+              className="inline-grid place-items-center lg:hidden h-10 w-10 rounded-xl icon-chip"
+              type="button"
             >
-              ☰
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
             </button>
           </div>
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile glass sheet — centered */}
-      {menuOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 md:hidden flex items-start justify-center p-3"
-          onClick={(e) => e.target === e.currentTarget && setMenuOpen(false)}
-        >
-          {/* dim + blur backdrop */}
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
-
-          {/* centered card (respects safe areas, max width) */}
-          <div
-            ref={sheetRef}
-            className="glass specular relative z-10 w-full max-w-md rounded-2xl p-3"
-            style={{ marginTop: "max(0.75rem, env(safe-area-inset-top))" }}
+      {/* Mobile drawer */}
+      <MobileDrawer open={open} onClose={() => setOpen(false)}>
+        {tabs.map((t) => (
+          <Link
+            key={t.label}
+            href={t.href}
+            className={[
+              'h-11 rounded-lg px-3 flex items-center',
+              isActive(t.href) ? 'bg-primary/15 border border-border/60' : 'hover:bg-accent/20',
+            ].join(' ')}
+            onClick={() => setOpen(false)}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-base font-medium">Menu</span>
-              <button
-                aria-label="Close menu"
-                onClick={() => setMenuOpen(false)}
-                className="rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm"
-              >
-                ✕
-              </button>
-            </div>
+            {t.label}
+          </Link>
+        ))}
 
-            <nav className="mt-2 grid gap-1">
-              {links.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={[
-                    "rounded-lg px-3 py-3 text-[15px] transition",
-                    "hover:bg-accent/15",
-                    pathname === l.href ? "bg-accent/20" : "",
-                  ].join(" ")}
-                >
-                  {l.label}
-                </Link>
-              ))}
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  booking.open({ id: "general", title: "General Inquiry" });
-                }}
-                className="mt-1 rounded-lg bg-primary px-3 py-3 text-left text-[15px] font-medium text-primary-foreground"
-              >
-                Book Now
-              </button>
-            </nav>
-          </div>
+        <div className="h-px bg-border/70 my-3" />
+
+        {!isLoggedIn ? (
+          <Link
+            href="/auth/sign-in"
+            className="h-11 rounded-lg px-3 flex items-center hover:bg-accent/20"
+            onClick={() => setOpen(false)}
+          >
+            Sign in
+          </Link>
+        ) : (
+          <>
+            <Link
+              href={dashboardHref}
+              className="h-11 rounded-lg px-3 flex items-center hover:bg-accent/20"
+              onClick={() => setOpen(false)}
+            >
+              Dashboard
+            </Link>
+            <button
+              className="h-11 rounded-lg px-3 text-left hover:bg-accent/20"
+              onClick={() => {
+                setOpen(false);
+                signOut({ callbackUrl: '/' });
+              }}
+            >
+              Log out
+            </button>
+          </>
+        )}
+
+        <div className="mt-3">
+          <button
+            onClick={() => { setOpen(false); booking.open(); }}
+            className="inline-flex h-11 w-full items-center justify-center rounded-lg gbtn transition-transform hover:scale-[1.02] active:scale-[0.99] specular"
+            type="button"
+          >
+            Book now
+          </button>
         </div>
-      )}
+      </MobileDrawer>
     </header>
   );
 }
