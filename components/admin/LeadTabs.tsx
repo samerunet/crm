@@ -2,7 +2,7 @@
 // Panel with tabs per client (Profile | Bookings | Contracts)
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Appointment, Lead } from './types';
+import { Appointment, Lead, STAGES } from './types';
 import { badgeClasses } from './theme';
 
 export default function LeadTabs({
@@ -21,7 +21,35 @@ export default function LeadTabs({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<'profile' | 'bookings' | 'contracts'>('profile');
-  const leadEvents = useMemo(() => events.filter((e) => e.leadId === lead.id), [events, lead.id]);
+  const leadEvents = useMemo(
+    () => (Array.isArray(events) ? events : []).filter((e) => e?.leadId === lead.id),
+    [events, lead.id]
+  );
+  const contactLine =
+    [lead.phone, lead.email].filter(Boolean).join(' · ') || '—';
+  const notesValue = Array.isArray(lead.notes)
+    ? lead.notes.join('\n')
+    : lead.notes ?? '';
+
+  const toDateTime = (value: string | Date | undefined) => {
+    if (!value) return 'Unknown';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? 'Unknown'
+      : date.toLocaleString([], {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+  };
+  const toTime = (value: string | Date | undefined) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? '—'
+      : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   useEffect(() => {
     const handler = () => onClose();
@@ -41,9 +69,7 @@ export default function LeadTabs({
         <div className="p-4 border-b dark:border-neutral-800 flex items-center justify-between">
           <div>
             <div className="text-lg font-semibold">{lead.name}</div>
-            <div className="text-xs text-neutral-500">
-              {lead.phone ?? lead.email ?? lead.instagram ?? '—'}
-            </div>
+            <div className="text-xs text-neutral-500">{contactLine}</div>
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2 py-1 rounded ${badgeClasses(lead.stage, lead.color)}`}>
@@ -94,17 +120,15 @@ export default function LeadTabs({
                   onChange={(e) => onStage(e.target.value as Lead['stage'])}
                   className="rounded border px-2 py-2 dark:bg-neutral-900 dark:border-neutral-700"
                 >
-                  <option value="new">New</option>
-                  <option value="qualified">Qualified</option>
-                  <option value="booked">Booked</option>
-                  <option value="deposit_paid">Deposit paid</option>
-                  <option value="completed">Completed</option>
-                  <option value="lost">Lost</option>
-                  <option value="no_show">No show</option>
+                  {STAGES.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {stage}
+                    </option>
+                  ))}
                 </select>
               </div>
               <textarea
-                defaultValue={lead.notes}
+                defaultValue={notesValue}
                 placeholder="Internal notes"
                 className="w-full min-h-24 rounded border px-2 py-2 dark:bg-neutral-900 dark:border-neutral-700"
               />
@@ -127,8 +151,7 @@ export default function LeadTabs({
                   <li key={e.id} className="py-3">
                     <div className="font-medium">{e.title}</div>
                     <div className="text-xs text-neutral-500">
-                      {e.start.toLocaleString()} –{' '}
-                      {e.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {toDateTime(e.start)} – {toTime(e.end)}
                     </div>
                     <div className="text-xs">Status: {e.status}</div>
                   </li>

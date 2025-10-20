@@ -2,7 +2,7 @@
 // Uses your globals.css tokens; heuristics color stages by name (works with custom stages)
 import type { LeadStage, LeadCategory } from './types';
 
-export const CATEGORY_DOT: Record<LeadCategory, string> = {
+export const CATEGORY_DOT: Record<LeadCategory | 'both', string> = {
   service: 'bg-[color:var(--amber,#b45309)]',
   guide:   'bg-[color:var(--teal,#0f766e)]',
   both:    'bg-[color:var(--gold,#C6A25A)]',

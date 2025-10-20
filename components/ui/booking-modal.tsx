@@ -1,163 +1,248 @@
-// components/ui/booking-modal.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState } from "react";
+import clsx from "clsx";
 
-type Service = { id: string; title: string };
+type Service = { id: string; title: string } | undefined;
 type AddOn = { id: string; label: string; price?: string };
-
-interface BookingModalProps {
-  open: boolean;
-  onClose: () => void;
-  service?: Service;
-  addOns?: AddOn[];
-}
 
 export default function BookingModal({
   open,
   onClose,
   service,
   addOns = [],
-}: BookingModalProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Close on ESC
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+}: {
+  open: boolean;
+  onClose: () => void;
+  service?: Service;
+  addOns?: AddOn[];
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [date, setDate] = useState("");
+  const [location, setLocation] = useState("");
+  const [partySize, setPartySize] = useState<number | "">("");
+  const [notes, setNotes] = useState("");
+  const [selAddOns, setSelAddOns] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState<
+    { type: "success" | "error"; msg: string } | null
+  >(null);
 
   if (!open) return null;
 
+  const toggleAddOn = (id: string) =>
+    setSelAddOns((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+
+  const smsBody =
+    `Booking Inquiry%0A` +
+    `Name: ${encodeURIComponent(name)}%0A` +
+    (email ? `Email: ${encodeURIComponent(email)}%0A` : "") +
+    (phone ? `Phone: ${encodeURIComponent(phone)}%0A` : "") +
+    (service?.title ? `Service: ${encodeURIComponent(service.title)}%0A` : "") +
+    (date ? `Date: ${encodeURIComponent(date)}%0A` : "") +
+    (location ? `Location: ${encodeURIComponent(location)}%0A` : "") +
+    (partySize ? `Party Size: ${encodeURIComponent(String(partySize))}%0A` : "") +
+    (selAddOns.length
+      ? `Add-ons: ${encodeURIComponent(selAddOns.join(", "))}%0A`
+      : "") +
+    (notes ? `%0ANotes: ${encodeURIComponent(notes)}` : "");
+
+  async function submit() {
+    setSubmitting(true);
+    setDone(null);
+    try {
+      const res = await fetch("/api/email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          service: service?.title,
+          date,
+          location,
+          partySize,
+          addOns: selAddOns,
+          notes,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Send failed");
+      setDone({ type: "success", msg: "Sent! We’ll get back to you shortly." });
+      setTimeout(onClose, 900);
+    } catch (err: any) {
+      setDone({ type: "error", msg: err?.message || "Send failed" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Booking"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
-      {/* BACKDROP — clicking it closes */}
-      <div
-        className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <button
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        aria-label="Close"
         onClick={onClose}
       />
-
-      {/* PANEL — stop click from bubbling to backdrop */}
       <div
-        ref={panelRef}
-        className="glass specular relative z-10 w-full max-w-lg rounded-2xl border border-border p-5 sm:p-6"
-        onClick={(e) => e.stopPropagation()}
+        className={clsx(
+          "relative w-full max-w-2xl rounded-2xl glass p-4 sm:p-6",
+          "border border-border/70 shadow-[0_24px_70px_rgba(0,0,0,0.26)]",
+        )}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold">Request Booking</h3>
-            <p className="mt-1 text-sm text-foreground/70">
-              {service ? service.title : "General inquiry"}
-            </p>
-          </div>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-xl font-semibold">Booking Request</h2>
           <button
-            aria-label="Close"
             onClick={onClose}
-            className="rounded-md border border-border bg-card/70 px-2.5 py-1 text-sm hover:bg-accent/15"
+            className="icon-chip h-9 w-9 inline-grid place-items-center rounded-xl"
+            aria-label="Close"
           >
-            ✕
+            ×
           </button>
         </div>
 
-        {/* Form (lightweight placeholder fields; wire up later) */}
-        <form
-          className="mt-4 grid gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            // handle submit later
-            onClose();
-          }}
-        >
-          <label className="grid gap-1">
-            <span className="text-sm">Name</span>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm">Name *</span>
             <input
-              className="rounded-md border border-border bg-card/70 px-3 py-2 outline-none"
-              placeholder="Your full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="crm-input"
+              placeholder="Jane Doe"
               required
             />
           </label>
 
-          <label className="grid gap-1">
+          <label className="flex flex-col gap-1">
             <span className="text-sm">Email</span>
             <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="crm-input"
+              placeholder="jane@email.com"
               type="email"
-              className="rounded-md border border-border bg-card/70 px-3 py-2 outline-none"
-              placeholder="you@example.com"
-              required
             />
           </label>
 
-          <label className="grid gap-1">
-            <span className="text-sm">Phone (for text reply)</span>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm">Phone</span>
             <input
-              type="tel"
-              className="rounded-md border border-border bg-card/70 px-3 py-2 outline-none"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="crm-input"
               placeholder="(555) 555-5555"
             />
           </label>
 
-          <label className="grid gap-1">
-            <span className="text-sm">Event date</span>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm">Preferred Date</span>
             <input
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="crm-input"
               type="date"
-              className="rounded-md border border-border bg-card/70 px-3 py-2 outline-none"
-              required
             />
           </label>
 
-          {!!addOns.length && (
-            <fieldset className="mt-2">
-              <legend className="mb-2 text-sm font-medium">Add-ons</legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {addOns.map((a) => (
-                  <label key={a.id} className="flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-2">
-                    <input type="checkbox" className="accent-[var(--accent)]" />
-                    <span className="text-sm">
-                      {a.label}
-                      {a.price ? <span className="ml-1 opacity-70">({a.price})</span> : null}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          )}
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-sm">Location</span>
+            <input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="crm-input"
+              placeholder="Venue / City"
+            />
+          </label>
 
-          <label className="grid gap-1">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm">Party Size</span>
+            <input
+              value={partySize}
+              onChange={(e) => {
+                const v = e.target.value;
+                setPartySize(v === "" ? "" : Number(v));
+              }}
+              className="crm-input"
+              type="number"
+              min={1}
+              placeholder="e.g., 6"
+            />
+          </label>
+
+          <div className="sm:col-span-2">
+            <span className="text-sm">Add-ons</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {addOns?.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => toggleAddOn(a.id)}
+                  className={clsx(
+                    "crm-chip",
+                    selAddOns.includes(a.id) && "bg-accent/20 border-accent",
+                  )}
+                >
+                  {a.label}
+                  {a.price ? ` — ${a.price}` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex flex-col gap-1 sm:col-span-2">
             <span className="text-sm">Notes</span>
             <textarea
-              rows={3}
-              className="rounded-md border border-border bg-card/70 px-3 py-2 outline-none"
-              placeholder="Tell us about your event (location, start time, party size, etc.)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="crm-input min-h-[90px]"
+              placeholder="Share any details, looks, or timing"
             />
           </label>
+        </div>
 
-          {/* Actions */}
-          <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-border bg-card/70 px-4 py-2 text-sm hover:bg-accent/15"
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            {service?.title ? (
+              <>
+                Selected service: <strong>{service.title}</strong>
+              </>
+            ) : (
+              <>Choose a service and we’ll tailor a plan.</>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <a
+              href={`sms:+16193996160?&body=${smsBody}`}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-card/70 px-4 text-sm hover:bg-accent/20"
             >
-              Cancel
-            </button>
+              Text instead
+            </a>
+
             <button
-              type="submit"
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-accent"
+              disabled={submitting || !name}
+              onClick={submit}
+              className="gbtn rounded-full px-5 h-11 inline-flex items-center justify-center specular disabled:opacity-60"
             >
-              Send Request
+              {submitting ? "Sending…" : "Send request"}
             </button>
           </div>
-        </form>
+        </div>
+
+        {done && (
+          <p
+            className={clsx(
+              "mt-3 text-sm",
+              done.type === "success" ? "text-emerald-600" : "text-destructive",
+            )}
+          >
+            {done.msg}
+          </p>
+        )}
       </div>
     </div>
   );

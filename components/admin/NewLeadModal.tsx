@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import type { Lead, LeadStage } from "./types";
+import { Lead, LeadStage, STAGES } from "./types";
 
 type Props = {
   open: boolean;
@@ -13,17 +13,6 @@ type Props = {
   /** Optional: override stage options */
   stages?: LeadStage[];
 };
-
-const DEFAULT_STAGES: LeadStage[] = [
-  "new",
-  "contacted",
-  "deposit",
-  "trial",
-  "booked",
-  "confirmed",
-  "changes",
-  "completed",
-];
 
 function toYMD(d?: Date | null) {
   if (!d) return "";
@@ -40,8 +29,8 @@ export default function NewLeadModal({
   initialDate,
   stages,
 }: Props) {
-  const STAGES = useMemo(
-    () => (stages && stages.length ? stages : DEFAULT_STAGES),
+  const stageOptions = useMemo(
+    () => (stages && stages.length ? stages : STAGES),
     [stages]
   );
 
@@ -49,14 +38,16 @@ export default function NewLeadModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [stage, setStage] = useState<LeadStage>(STAGES[0] || "new");
+  const [stage, setStage] = useState<LeadStage>(stageOptions[0] ?? "uncontacted");
   const [serviceDate, setServiceDate] = useState<string>(toYMD(initialDate));
   const [notes, setNotes] = useState("");
 
   // keep stage default in sync if stages prop changes
   useEffect(() => {
-    setStage((prev) => (STAGES.includes(prev) ? prev : STAGES[0] || "new"));
-  }, [STAGES]);
+    setStage((prev) =>
+      stageOptions.includes(prev) ? prev : stageOptions[0] ?? "uncontacted"
+    );
+  }, [stageOptions]);
 
   // prefill date when modal opens from calendar
   useEffect(() => {
@@ -67,22 +58,18 @@ export default function NewLeadModal({
 
   const handleSubmit = () => {
     if (disabled) return;
-    const id = `l_${Date.now()}`;
+    const date = serviceDate ? new Date(`${serviceDate}T00:00:00`).toISOString() : undefined;
 
-    const lead: Lead = {
-      id,
+    onCreate({
+      id: `l_${Date.now()}`,
       name: name.trim(),
       phone: phone.trim() || undefined,
       email: email.trim() || undefined,
       stage,
-      lastContactAt: null,
-      dateOfService: serviceDate ? (new Date(`${serviceDate}T00:00:00`) as any) : undefined,
-      // Safe extras your app already tolerates:
+      lastContactAt: null as any,
+      dateOfService: date || undefined,
       tags: [],
-      // If your Lead type has notes array, you can push later in the editor.
-    } as Lead;
-
-    onCreate(lead);
+    } as unknown as Lead);
   };
 
   if (!open) return null;
@@ -150,7 +137,7 @@ export default function NewLeadModal({
                   onChange={(e) => setStage(e.target.value as LeadStage)}
                   className="crm-input"
                 >
-                  {STAGES.map((s) => (
+                  {stageOptions.map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>

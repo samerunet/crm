@@ -1,188 +1,136 @@
-// components/admin/types.ts  ✦ FULL FILE (updated)
-// - Adds PricingConfig and ContractItem
-// - Adds contract versioning + deposit/total on Contract
-// - Adds pricing to Lead
+// components/admin/types.ts
 
+// Stages used across UI
 export type LeadStage =
-  | 'uncontacted'
-  | 'contacted'
-  | 'deposit'
-  | 'trial'
-  | 'booked'
-  | 'confirmed'
-  | 'changes'
-  | 'completed'
-  | 'lost';
+  | "uncontacted"
+  | "contacted"
+  | "deposit"
+  | "trial"
+  | "booked"
+  | "confirmed"
+  | "changes"
+  | "completed"
+  | "lost";
 
-export const DEFAULT_STAGES: LeadStage[] = [
-  'uncontacted',
-  'contacted',
-  'deposit',
-  'trial',
-  'booked',
-  'confirmed',
-  'changes',
-  'completed',
+export const STAGES: LeadStage[] = [
+  "uncontacted",
+  "contacted",
+  "deposit",
+  "trial",
+  "booked",
+  "confirmed",
+  "changes",
+  "completed",
+  "lost",
 ];
 
-export type PaymentMethod = 'cash' | 'venmo' | 'zelle';
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'void';
-export type InvoiceKind = 'deposit' | 'balance';
-export type ContractStatus = 'draft' | 'sent' | 'signed' | 'void';
+export type LeadCategory = "service" | "guide";
 
-export type Address = {
-  address?: string;
+export interface Address {
+  line1?: string;
+  line2?: string;
   city?: string;
   state?: string;
   zip?: string;
-};
+}
 
-export type Appointment = {
+export type ContractStatus = "draft" | "sent" | "viewed" | "signed" | "void";
+
+export interface EsignField {
   id: string;
-  title: string;
-  start: Date | string;
-  end: Date | string;
-  leadId?: string;
-  service?: string;
-  price?: number;
-  deposit?: number;
-  travelFee?: number;
-  location?: Address;
-  status?: 'tentative' | 'booked' | 'completed' | 'canceled';
-};
-
-export type InvoiceLine = { label: string; amount: number };
-
-export type Payment = {
-  id: string;
-  invoiceId: string;
-  amount: number;
-  method: PaymentMethod;
-  createdAt: Date | string;
-  note?: string;
-};
-
-export type Invoice = {
-  id: string;
-  leadId: string;
-  bookingId?: string;
-  number?: string;
-  kind?: InvoiceKind;
-  dueAt?: Date | string;
-  lines?: InvoiceLine[];
-  total?: number;
-  status?: InvoiceStatus;
-  sentAt?: Date | string;
-  url?: string;
-  payments?: Payment[];
-};
-
-export type EsignField = {
-  id: string;                        // 'policies', 'signature', etc.
-  type: 'initial' | 'signature';
+  type: "signature" | "initial" | "text" | "date";
   label?: string;
-  valueText?: string;                // initials
-  imageDataUrl?: string;             // signature PNG
   required?: boolean;
-};
+  page?: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
 
-export type ContractItem = {
-  label: string;
-  priceText: string;                 // e.g. "$380" or "$120/hr"
-};
-
-export type Contract = {
+export interface Contract {
   id: string;
   leadId: string;
-  bookingId?: string;
-  template?: string;                 // 'wedding_standard'
-  body?: string;                     // rendered HTML
+  template?: string;
+  title?: string;
+  body?: string;
   status?: ContractStatus;
-  sentAt?: Date | string;
-  signedAt?: Date | string;
+  createdAt?: string;
+  sentAt?: string | Date;
+  signedAt?: string | Date;
+  version?: number;
   digitalStamp?: string;
-  url?: string;
-
-  // versioning
-  version?: number;                  // 1,2,3...
-  createdAt?: Date | string;
-
-  // pulled from Details / builder
-  items?: ContractItem[];            // rows for Services table
-  depositAmount?: number;            // flat deposit in USD
-  totalAmount?: number;              // numeric total used for invoices
-  partySize?: number;
-  serviceDate?: Date | string;
-  location?: Address;
-  ccEmails?: string[];
-  recipientEmail?: string;
   esignFields?: EsignField[];
-};
+}
 
-export type LeadNote = {
+export type ContractRec = Contract;
+
+export interface Invoice {
   id: string;
-  text: string;
-  createdAt: Date | string;
-};
+  leadId: string;
+  type: "deposit" | "balance";
+  amount: number;
+  createdAt: string;
+  dueAt?: string;
+  paidAt?: string;
+  method?: "cash" | "venmo" | "zelle" | "card";
+}
+export type InvoiceRec = Invoice;
 
-export type Intake = {
-  skinType?: 'dry' | 'oily' | 'combo' | 'normal' | 'sensitive';
-  allergies?: string;
-  preferences?: string;
-  hairType?: 'straight' | 'wavy' | 'curly' | 'coily' | 'fine' | 'thick';
-  concerns?: string;
-  referenceLinks?: string;
-  addressOnSite?: string;
-  timeWindow?: string; // e.g. "arrive by 8:00 AM"
-};
+export type AppointmentStatus = "tentative" | "booked" | "completed" | "canceled";
 
-export type PricingConfig = {
-  bridalMakeup?: number;        // $380
-  bridalHairstyle?: number;     // $350
-  touchupsHourly?: number;      // $120 (per hour)
-  travelFee?: number;           // $50
-  travelCity?: string;          // "National City"
-  depositFlat?: number;         // $100
-  extraItems?: { label: string; price: number }[]; // optional add-ons
-};
+export interface Appointment {
+  id: string;
+  leadId?: string;
+  title: string;
+  service?: string;
+  start: string | Date;
+  end: string | Date;
+  status?: AppointmentStatus;
+  price?: number;
+}
 
-export type Lead = {
+export interface Sale {
+  id: string;
+  type: "guide" | "service";
+  amount: number;
+  createdAt: string | Date;
+}
+
+export interface Lead {
   id: string;
   name: string;
-  email?: string;
   phone?: string;
-  instagram?: string;
-  phoneNormalized?: string;
-  portalKey?: string;
-  registrationCode?: string;
-  hasAccount?: boolean;
-
+  email?: string;
   stage: LeadStage;
-  category?: 'service' | 'guide' | 'both';
-  source?: string;
+  category?: LeadCategory;
+  createdAt?: string;
+  lastContactAt?: string | Date;
+  dateOfService?: string; // ISO
+  notes?: string[];
+  address?: Address;
+  tags?: string[];
+  color?: string;
 
-  // Details
-  eventType?: 'wedding' | 'event' | 'tutorial' | 'trial' | 'other';
-  partySize?: number;
-  wantsMakeup?: boolean;
-  wantsHair?: boolean;
-  serviceDate?: Date | string;
-  location?: Address;
-
-  // Pricing shown in Details (drives contract)
-  pricing?: PricingConfig;
-
-  // Optional override total (kept if you want it)
-  customTotal?: number;
-
-  requestedDate?: Date | string;
-  lastContactAt?: Date | string;
-
-  notes?: string;
-  notesList?: LeadNote[];
-
-  intake?: Intake;
-
-  invoices?: Invoice[];
   contracts?: Contract[];
+  invoices?: Invoice[];
+  bookings?: Appointment[];
+}
+
+export interface DateRange {
+  start: string | Date;
+  end: string | Date;
+}
+
+// Stage colors (used by chips)
+export const STAGE_COLORS: Record<LeadStage, string> = {
+  uncontacted: "#C6A25A",
+  contacted: "#8B6547",
+  deposit: "#9D7E60",
+  trial: "#b45309",
+  booked: "#008767",
+  confirmed: "#0f766e",
+  changes: "#8A6E4D",
+  completed: "#2C1B12",
+  lost: "#5A3725",
 };

@@ -11,7 +11,10 @@ export type ContractOptions = {
 };
 
 function fmtAddr(a?: Address) {
-  return [a?.address, a?.city, a?.state, a?.zip].filter(Boolean).join(', ');
+  if (!a) return '';
+  const line = [a.line1, a.line2].filter(Boolean).join(' ');
+  const city = [a.city, a.state, a.zip].filter(Boolean).join(', ');
+  return [line, city].filter(Boolean).join(', ');
 }
 function esc(s?: string) {
   return (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -22,6 +25,7 @@ function parseMoney(text: string): number {
 }
 
 export function renderHollywoodStyleContract(lead: Lead, opts: ContractOptions = {}) {
+  const loose = lead as Lead & Record<string, any>;
   const business = esc(opts.businessName || 'HOLLYWOOD STYLE LLC');
 
   // Defaults if not provided
@@ -31,7 +35,10 @@ export function renderHollywoodStyleContract(lead: Lead, opts: ContractOptions =
         { label: 'Bridal Makeup',                    priceText: '$380' },
         { label: 'Bridal hairstyle',                 priceText: '$350' },
         { label: 'Makeup and hairstyle touch ups',   priceText: '$120/hr' },
-        { label: `travel fee to ${lead.location?.city || 'your area'}`, priceText: '$50' },
+        {
+          label: `travel fee to ${loose.location?.city || lead.address?.city || 'your area'}`,
+          priceText: '$50',
+        },
       ];
 
   const deposit = Number.isFinite(opts.depositAmount as number) ? (opts.depositAmount as number) : 100;
@@ -41,11 +48,19 @@ export function renderHollywoodStyleContract(lead: Lead, opts: ContractOptions =
   const balance = Math.max(0, total - deposit);
 
   const client = esc(lead.name);
-  const eventType = esc(lead.eventType || '—');
-  const serviceDate = lead.serviceDate ? new Date(lead.serviceDate as any).toLocaleDateString() : '—';
-  const partySize = String(lead.partySize ?? 1);
-  const wants = [lead.wantsMakeup ? 'Makeup' : '', lead.wantsHair ? 'Hair' : ''].filter(Boolean).join(' & ') || '—';
-  const location = fmtAddr(lead.location);
+  const eventType = esc(loose.eventType || '—');
+  const serviceDateSrc = loose.serviceDate ?? lead.dateOfService;
+  const serviceDate = serviceDateSrc
+    ? new Date(serviceDateSrc as any).toLocaleDateString()
+    : '—';
+  const partySize = String(loose.partySize ?? 1);
+  const wants = [
+    loose.wantsMakeup ? 'Makeup' : '',
+    loose.wantsHair ? 'Hair' : '',
+  ]
+    .filter(Boolean)
+    .join(' & ') || '—';
+  const location = fmtAddr((loose.location as Address | undefined) ?? lead.address);
 
   return /* html */ `
   <article style="max-width:760px;margin:0 auto;background:#fff;color:#111;line-height:1.55;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding:24px;">

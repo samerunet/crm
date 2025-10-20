@@ -6,14 +6,19 @@ import type { Lead } from "./types";
 
 function StageBadge({ stage }: { stage: Lead["stage"] }) {
   const cls =
-    stage === "new"        ? "badge badge-new" :
-    stage === "completed"  ? "badge badge-booked" :
-    stage === "booked"     ? "badge badge-booked" :
-    stage === "trial"      ? "badge badge-trial" :
-    "badge";
+    stage === "uncontacted"
+      ? "badge badge-new"
+      : stage === "completed"
+      ? "badge badge-booked"
+      : stage === "booked"
+      ? "badge badge-booked"
+      : stage === "trial"
+      ? "badge badge-trial"
+      : "badge";
   return <span className={cls}>{stage}</span>;
 }
-const fmtDate = (d: any) => (d ? new Date(d).toLocaleDateString() : "");
+const fmtDate = (d: string | Date | undefined) =>
+  d ? new Date(d).toLocaleDateString() : "";
 
 export default function LeadList({
   leads,

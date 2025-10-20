@@ -42,8 +42,23 @@ export default function LeadDrawer({
             <div className="text-sm text-foreground/70 space-y-1">
               <div>Phone: {lead.phone || "—"}</div>
               <div>Email: {lead.email || "—"}</div>
-              {lead.serviceDate && <div>Service date: {new Date(lead.serviceDate).toLocaleString()}</div>}
-              {lead.location && <div>Location: {lead.location}</div>}
+              {lead.dateOfService && (
+                <div>
+                  Service date:{" "}
+                  {new Date(lead.dateOfService).toLocaleDateString([], {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </div>
+              )}
+              {lead.address && (
+                <div className="text-muted-foreground">
+                  {[lead.address.line1, lead.address.line2].filter(Boolean).join(" ")}
+                  <br />
+                  {[lead.address.city, lead.address.state, lead.address.zip].filter(Boolean).join(", ")}
+                </div>
+              )}
             </div>
           </div>
 

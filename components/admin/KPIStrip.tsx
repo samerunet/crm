@@ -33,25 +33,62 @@ export default function KPIStrip({
   sales: Sale[];
   leads: Lead[];
 }) {
-  const serviceRevenue = useMemo(() => events.reduce((s, e: any) => s + (e.price ?? 0), 0), [events]);
+  const eventList = Array.isArray(events) ? events : [];
+  const saleList = Array.isArray(sales) ? sales : [];
+
+  const serviceRevenue = useMemo(
+    () => eventList.reduce((s, e: any) => s + (e?.price ?? 0), 0),
+    [eventList]
+  );
   const guideRevenue = useMemo(
-    () => sales.filter((s: any) => s.type === "guide").reduce((s, e) => s + (e.amount ?? 0), 0),
-    [sales]
+    () =>
+      saleList
+        .filter((s: any) => s?.type === "guide")
+        .reduce((s, e) => s + (e?.amount ?? 0), 0),
+    [saleList]
   );
   const trials = useMemo(
-    () => events.filter((e: any) => (e.service || "").toLowerCase().includes("trial")).length,
-    [events]
+    () =>
+      eventList.filter((e: any) =>
+        (e?.service || "").toLowerCase().includes("trial")
+      ).length,
+    [eventList]
   );
   const booked = useMemo(
-    () => events.filter((e: any) => e.status === "booked" || e.status === "completed").length,
-    [events]
+    () =>
+      eventList.filter(
+        (e: any) => e?.status === "booked" || e?.status === "completed"
+      ).length,
+    [eventList]
   );
 
   // Sparklines
-  const svSeries = useMemo(() => seriesFromAmounts(events.map((e: any) => e.price ?? 0)), [events]);
-  const gdSeries = useMemo(() => seriesFromAmounts(sales.filter((s: any) => s.type === "guide").map((s) => s.amount ?? 0)), [sales]);
-  const bkSeries = useMemo(() => seriesFromAmounts(events.map(() => 1)), [events]);
-  const trSeries = useMemo(() => seriesFromAmounts(events.map((e: any) => ((e.service || "").toLowerCase().includes("trial") ? 1 : 0))), [events]);
+  const svSeries = useMemo(
+    () => seriesFromAmounts(eventList.map((e: any) => e?.price ?? 0)),
+    [eventList]
+  );
+  const gdSeries = useMemo(
+    () =>
+      seriesFromAmounts(
+        saleList
+          .filter((s: any) => s?.type === "guide")
+          .map((s) => s?.amount ?? 0)
+      ),
+    [saleList]
+  );
+  const bkSeries = useMemo(
+    () => seriesFromAmounts(eventList.map(() => 1)),
+    [eventList]
+  );
+  const trSeries = useMemo(
+    () =>
+      seriesFromAmounts(
+        eventList.map((e: any) =>
+          (e?.service || "").toLowerCase().includes("trial") ? 1 : 0
+        )
+      ),
+    [eventList]
+  );
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

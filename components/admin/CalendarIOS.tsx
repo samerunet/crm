@@ -6,11 +6,29 @@ import type { Appointment, Lead } from "./types";
 
 /** Safely pull a Date from many possible event fields */
 function getEventDate(e: any): Date | null {
-  const v = e?.date || e?.dateISO || e?.start || e?.startAt || e?.when;
+  const v = e?.start || e?.dateISO || e?.startAt || e?.when;
   if (!v) return null;
   const d = new Date(v);
   return isNaN(+d) ? null : d;
 }
+function getEventEnd(e: any, start: Date | null): Date | null {
+  const v = e?.end || e?.endAt || e?.finish || e?.endTime;
+  if (v) {
+    const d = new Date(v);
+    if (!isNaN(+d)) return d;
+  }
+  if (start) {
+    return new Date(start.getTime() + 60 * 60 * 1000);
+  }
+  return null;
+}
+const toTime = (value: Date | string | null | undefined) => {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
 function ymd(d: Date) {
   const y = d.getFullYear();
   const m = `${d.getMonth() + 1}`.padStart(2, "0");
@@ -156,22 +174,27 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
             <div className="text-sm text-muted-foreground p-3">No bookings today.</div>
           ) : (
             <ul className="divide-y glass-sep">
-              {todayList.map((e: any) => (
-                <li key={e.id} className="py-2 px-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-medium">{e.title || e.service || "Appointment"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {(e.time || e.startTime || "").toString()}
-                        {e.location ? ` · ${e.location}` : ""}
+              {todayList.map((e: any) => {
+                const start = getEventDate(e);
+                const end = getEventEnd(e, start);
+                const timeLabel = [toTime(start), toTime(end)].filter(Boolean).join(" – ");
+                return (
+                  <li key={e.id} className="py-2 px-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium">{e.title || e.service || "Appointment"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {timeLabel}
+                          {e.location ? ` · ${e.location}` : ""}
+                        </div>
                       </div>
+                      {e.price != null && (
+                        <div className="text-sm font-medium">${Math.round(e.price)}</div>
+                      )}
                     </div>
-                    {e.price != null && (
-                      <div className="text-sm font-medium">${Math.round(e.price)}</div>
-                    )}
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -268,31 +291,34 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
 
             {selectedDate && (
               <ul className="mt-2 divide-y glass-sep">
-                {(eventsByDay.get(ymd(selectedDate)) ?? []).map((e) => (
-                  <li key={e.id} className="py-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-sm">
-                          {e.title || e.service || "Appointment"}
+                {(eventsByDay.get(ymd(selectedDate)) ?? []).map((e) => {
+                  const start = getEventDate(e);
+                  const end = getEventEnd(e, start);
+                  const timeLabel = [toTime(start), toTime(end)].filter(Boolean).join(" – ");
+                  return (
+                    <li key={e.id} className="py-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">
+                            {e.title || e.service || "Appointment"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{timeLabel}</div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {(e as any).time || (e as any).startTime || ""}
+                        <div className="flex items-center gap-2">
+                          {e.price != null && (
+                            <span className="text-xs font-medium">${Math.round(e.price)}</span>
+                          )}
+                          <button
+                            className="h-8 rounded-md border border-border/60 px-2 text-xs hover:bg-accent/20"
+                            onClick={() => onEventOpen?.(e)}
+                          >
+                            Open
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {e.price != null && (
-                          <span className="text-xs font-medium">${Math.round(e.price)}</span>
-                        )}
-                        <button
-                          className="h-8 rounded-md border border-border/60 px-2 text-xs hover:bg-accent/20"
-                          onClick={() => onEventOpen?.(e)}
-                        >
-                          Open
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
                 {(eventsByDay.get(ymd(selectedDate)) ?? []).length === 0 && (
                   <li className="py-2 text-sm text-muted-foreground">No events on this day.</li>
                 )}

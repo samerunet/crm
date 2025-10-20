@@ -1,164 +1,172 @@
 .
-├── .env
-├── .env.example
-├── .env.local
-├── .gitignore
-├── README.md
-├── app
-│   ├── admin
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── api
-│   │   ├── auth
-│   │   │   ├── [...nextauth]
-│   │   │   │   └── route.ts
-│   │   │   ├── forgot
-│   │   │   │   └── route.ts
-│   │   │   ├── register
-│   │   │   │   └── route.ts
-│   │   │   └── reset
-│   │   │       └── route.ts
-│   │   ├── booking
-│   │   │   └── route.ts
-│   │   ├── health
-│   │   │   └── route.ts
-│   │   └── leads
-│   │       └── route.ts
-│   ├── auth
-│   │   ├── forgot
-│   │   │   └── page.tsx
-│   │   ├── reset
-│   │   │   └── page.tsx
-│   │   ├── sign-in
-│   │   │   └── page.tsx
-│   │   └── sign-up
-│   │       └── page.tsx
-│   ├── courses
-│   │   └── page.tsx
-│   ├── dashboard
-│   │   ├── components
-│   │   │   ├── ClientContracts.tsx
-│   │   │   ├── ClientDashboard.tsx
-│   │   │   ├── ClientGuides.tsx
-│   │   │   ├── ClientIntake.tsx
-│   │   │   ├── ClientInvoices.tsx
-│   │   │   ├── ClientSchedule.tsx
-│   │   │   ├── KPICard.tsx
-│   │   │   └── Tabs.tsx
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── dashboard1
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── globals.css
-│   ├── guides
-│   │   └── page.tsx
-│   ├── layout.backup.tsx
-│   ├── layout.tsx
-│   ├── login
-│   │   └── page.tsx
-│   ├── page.tsx
-│   ├── portfolio
-│   │   └── page.tsx
-│   └── services
-│       ├── layout.tsx
-│       ├── page.backup.tsx
-│       └── page.tsx
-├── components
-│   ├── admin
-│   │   ├── AdminDashboard.tsx
-│   │   ├── AlertsModal.tsx
-│   │   ├── BigCalendar.tsx
-│   │   ├── CalendarIOS.tsx
-│   │   ├── ContentDashboard.tsx
-│   │   ├── ContractBuilderModal.tsx
-│   │   ├── CustomerEditor.tsx
-│   │   ├── CustomerModal.tsx
-│   │   ├── EsignModal.tsx
-│   │   ├── FiltersBar.tsx
-│   │   ├── HeaderAlerts.tsx
-│   │   ├── KPIBlock.tsx
-│   │   ├── KPIStrip.tsx
-│   │   ├── LeadDrawer.tsx
-│   │   ├── LeadList.tsx
-│   │   ├── LeadTabs.tsx
-│   │   ├── NewLeadModal.tsx
-│   │   ├── ProgressStepper.tsx
-│   │   ├── SignatureCanvas.tsx
-│   │   ├── StageFilterBar.tsx
-│   │   ├── StageManagerModal.tsx
-│   │   ├── TopBar.tsx
-│   │   ├── YearCalendar.tsx
-│   │   ├── contractTemplates.ts
-│   │   ├── theme.ts
-│   │   └── types.ts
-│   ├── sections
-│   │   ├── about.tsx
-│   │   ├── booking-banner.tsx
-│   │   ├── cta-section.tsx
-│   │   ├── hero.tsx
-│   │   └── showcase-grid.tsx
-│   └── ui
-│       ├── app-providers.tsx
-│       ├── booking-modal.tsx
-│       ├── booking-provider.tsx
-│       ├── footer.tsx
-│       ├── icons.tsx
-│       └── navbar.tsx
-├── diagnostics.txt
-├── lib
-│   ├── auth.ts
-│   ├── db.ts
-│   └── password.ts
-├── next-env.d.ts
-├── next.config.ts
-├── package-lock.json
-├── package.json
-├── postcss.config.mjs
-├── prisma
-│   ├── dev.db
-│   ├── migrations
-│   │   ├── 20251001010118_init
-│   │   │   └── migration.sql
-│   │   ├── 20251004211140_base_user_courses_guides_orders
-│   │   │   └── migration.sql
-│   │   ├── 20251004223021_add_passwordhash_to_user
-│   │   │   └── migration.sql
-│   │   └── migration_lock.toml
-│   ├── prisma
-│   │   └── dev.db
-│   └── schema.prisma
-├── project-tree.txt
-├── project_tree.txt
-├── public
-│   ├── placeholder
-│   │   ├── 1.jpg
-│   │   ├── 2.jpg
-│   │   ├── 3.jpg
-│   │   ├── 4.jpg
-│   │   ├── 5.jpg
-│   │   ├── 6.jpg
-│   │   └── hero.png
-│   └── portfolio
-│       ├── Facetune_09-09-2023-11-55-20.JPG
-│       ├── IMG_1866.JPG
-│       ├── IMG_2107.JPG
-│       ├── IMG_3156.JPG
-│       ├── IMG_3163.JPG
-│       ├── IMG_3256.JPG
-│       ├── IMG_3878.JPG
-│       ├── IMG_3969.JPG
-│       ├── IMG_3971.JPG
-│       ├── IMG_4266.JPG
-│       ├── IMG_5347.JPG
-│       ├── IMG_6103.JPG
-│       ├── IMG_6746.JPG
-│       ├── IMG_7230.JPG
-│       ├── IMG_7267.JPG
-│       ├── IMG_8397.JPG
-│       └── file.md
-├── scripts
-│   └── seed-users.js
-└── tsconfig.json
-
-40 directories, 122 files
+    types
+    |   react-big-calendar.d.ts
+    project_tree.txt
+    app
+    |   auth
+    |   |   sign-up
+    |   |   |   page.tsx
+    |   |   reset
+    |   |   |   page.tsx
+    |   |   sign-in
+    |   |   |   page.tsx
+    |   |   forgot
+    |   |   |   page.tsx
+    |   faq
+    |   |   page.tsx
+    |   admin
+    |   |   layout.tsx
+    |   |   page.tsx
+    |   layout.backup.tsx
+    |   about
+    |   |   page.tsx
+    |   dashboard
+    |   |   components
+    |   |   |   ClientContracts.tsx
+    |   |   |   KPICard.tsx
+    |   |   |   Tabs.tsx
+    |   |   |   ClientSchedule.tsx
+    |   |   |   ClientInvoices.tsx
+    |   |   |   ClientIntake.tsx
+    |   |   |   ClientGuides.tsx
+    |   |   |   ClientDashboard.tsx
+    |   |   layout.tsx
+    |   |   page.tsx
+    |   courses
+    |   |   page.tsx
+    |   guides
+    |   |   page.tsx
+    |   dashboard1
+    |   |   layout.tsx
+    |   |   page.tsx
+    |   layout.tsx
+    |   portfolio
+    |   |   page.tsx
+    |   api
+    |   |   contact
+    |   |   |   route.ts
+    |   |   auth
+    |   |   |   reset
+    |   |   |   register
+    |   |   |   [...nextauth]
+    |   |   |   forgot
+    |   |   booking
+    |   |   |   route.ts
+    |   |   leads
+    |   |   |   route.ts
+    |   |   health
+    |   |   |   route.ts
+    |   page.tsx
+    |   globals.css
+    |   login
+    |   |   page.tsx
+    |   services
+    |   |   layout.tsx
+    |   |   page.tsx
+    |   |   page.backup.tsx
+    postcss.config.mjs
+    tsconfig.tsbuildinfo
+    node_modules
+    prisma
+    |   migrations
+    |   |   migration_lock.toml
+    |   |   20251004223021_add_passwordhash_to_user
+    |   |   |   migration.sql
+    |   |   20251004211140_base_user_courses_guides_orders
+    |   |   |   migration.sql
+    |   |   20251001010118_init
+    |   |   |   migration.sql
+    |   schema.prisma
+    |   prisma
+    |   |   dev.db
+    |   dev.db
+    next-env.d.ts
+    README.md
+    components
+    |   ui
+    |   |   navbar.tsx
+    |   |   booking-provider.tsx
+    |   |   app-providers.tsx
+    |   |   booking-modal.tsx
+    |   |   footer.tsx
+    |   |   icons.tsx
+    |   sections
+    |   |   hero.tsx
+    |   |   service-modal.tsx
+    |   |   booking-banner.tsx
+    |   |   showcase-grid.tsx
+    |   |   instagram-banner.tsx
+    |   |   cta-section.tsx
+    |   |   about.tsx
+    |   |   contact-form.tsx
+    |   admin
+    |   |   NewLeadModal.tsx
+    |   |   ContentDashboard.tsx
+    |   |   CalendarIOS.tsx
+    |   |   TopBar.tsx
+    |   |   LeadDrawer.tsx
+    |   |   ProgressStepper.tsx
+    |   |   types.ts
+    |   |   KPIStrip.tsx
+    |   |   LeadTabs.tsx
+    |   |   StageManagerModal.tsx
+    |   |   AlertsModal.tsx
+    |   |   CustomerModal.tsx
+    |   |   YearCalendar.tsx
+    |   |   BigCalendar.tsx
+    |   |   StageFilterBar.tsx
+    |   |   CustomerEditor.tsx
+    |   |   HeaderAlerts.tsx
+    |   |   SignatureCanvas.tsx
+    |   |   theme.ts
+    |   |   KPIBlock.tsx
+    |   |   FiltersBar.tsx
+    |   |   contractTemplates.ts
+    |   |   LeadList.tsx
+    |   |   EsignModal.tsx
+    |   |   AdminDashboard.tsx
+    |   |   ContractBuilderModal.tsx
+    public
+    |   images
+    |   |   README.md
+    |   |   fariia-portrait.jpg
+    |   portfolio
+    |   |   IMG_4266.JPG
+    |   |   IMG_5347.JPG
+    |   |   IMG_6103.JPG
+    |   |   Facetune_09-09-2023-11-55-20.JPG
+    |   |   IMG_7230.JPG
+    |   |   IMG_1866.JPG
+    |   |   IMG_3256.JPG
+    |   |   file.md
+    |   |   IMG_2107.JPG
+    |   |   IMG_3971.JPG
+    |   |   12.JPG
+    |   |   IMG_3156.JPG
+    |   |   IMG_6746.JPG
+    |   |   IMG_7267.JPG
+    |   |   IMG_3969.JPG
+    |   |   IMG_3163.JPG
+    |   |   IMG_8397.JPG
+    |   |   IMG_3878.JPG
+    |   placeholder
+    |   |   hero.png
+    |   |   4.jpg
+    |   |   5.jpg
+    |   |   6.jpg
+    |   |   2.jpg
+    |   |   logo.svg
+    |   |   3.jpg
+    |   |   1.jpg
+    package-lock.json
+    package.json
+    scripts
+    |   seed-users.js
+    project-tree.txt
+    lib
+    |   password.ts
+    |   db.ts
+    |   auth.ts
+    tsconfig.json
+    next.config.ts
+    diagnostics.txt

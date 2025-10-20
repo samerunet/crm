@@ -8,21 +8,76 @@ import NewLeadModal from "./NewLeadModal";
 import HeaderAlerts from "./HeaderAlerts";
 import KPIStrip from "./KPIStrip";
 import CustomerModal from "./CustomerModal";
-import type { Appointment, Lead, Sale } from "./types";
+import { Lead, Appointment, Sale, STAGES } from "./types";
 
 /* ----- demo data (replace with real data) ----- */
+const nowMs = Date.now();
+const hourMs = 60 * 60 * 1000;
 const DEMO_LEADS: Lead[] = [
-  { id: "l1", name: "Alice Park", phone: "555-201", email: "alice@example.com", stage: "new", lastContactAt: null, dateOfService: new Date() as any, tags: [] },
-  { id: "l2", name: "Brianna Chen", phone: "555-202", email: "bri@example.com", stage: "booked", lastContactAt: new Date() as any, dateOfService: new Date(Date.now()+86400000*3) as any, tags: ["repeat"] },
-  { id: "l3", name: "Cami Diaz", phone: "555-203", email: "cami@example.com", stage: "completed", lastContactAt: new Date() as any, dateOfService: new Date(Date.now()-86400000*10) as any, tags: [] },
+  {
+    id: "l1",
+    name: "Alice Park",
+    phone: "555-201",
+    email: "alice@example.com",
+    stage: "uncontacted",
+    dateOfService: new Date(nowMs).toISOString(),
+    tags: [],
+  },
+  {
+    id: "l2",
+    name: "Brianna Chen",
+    phone: "555-202",
+    email: "bri@example.com",
+    stage: "booked",
+    lastContactAt: new Date(nowMs).toISOString(),
+    dateOfService: new Date(nowMs + 86400000 * 3).toISOString(),
+    tags: ["repeat"],
+  },
+  {
+    id: "l3",
+    name: "Cami Diaz",
+    phone: "555-203",
+    email: "cami@example.com",
+    stage: "completed",
+    lastContactAt: new Date(nowMs - 86400000).toISOString(),
+    dateOfService: new Date(nowMs - 86400000 * 10).toISOString(),
+    tags: [],
+  },
 ];
 const DEMO_EVENTS: Appointment[] = [
-  { id: "e1", title: "Bridal Trial — Alice", date: new Date() as any, price: 120, leadId: "l1", status: "booked", service: "trial" },
-  { id: "e2", title: "Wedding — Brianna", date: new Date(Date.now()+86400000*3) as any, price: 380, leadId: "l2", status: "booked", service: "wedding" },
-  { id: "e3", title: "Studio — Cami",   date: new Date(Date.now()-86400000*10) as any, price: 180, leadId: "l3", status: "completed", service: "studio" },
+  {
+    id: "e1",
+    title: "Bridal Trial — Alice",
+    start: new Date(nowMs).toISOString(),
+    end: new Date(nowMs + hourMs).toISOString(),
+    price: 120,
+    leadId: "l1",
+    status: "booked",
+    service: "trial",
+  },
+  {
+    id: "e2",
+    title: "Wedding — Brianna",
+    start: new Date(nowMs + 86400000 * 3).toISOString(),
+    end: new Date(nowMs + 86400000 * 3 + hourMs * 4).toISOString(),
+    price: 380,
+    leadId: "l2",
+    status: "booked",
+    service: "wedding",
+  },
+  {
+    id: "e3",
+    title: "Studio — Cami",
+    start: new Date(nowMs - 86400000 * 10).toISOString(),
+    end: new Date(nowMs - 86400000 * 10 + hourMs * 2).toISOString(),
+    price: 180,
+    leadId: "l3",
+    status: "completed",
+    service: "studio",
+  },
 ];
 const DEMO_SALES: Sale[] = [
-  { id: "s1", leadId: "l2", amount: 59, type: "guide", createdAt: new Date() as any },
+  { id: "s1", amount: 59, type: "guide", createdAt: new Date(nowMs).toISOString() },
 ];
 
 type ViewMode = "calendar" | "leads" | "contracts" | "invoices" | "content";
@@ -36,6 +91,8 @@ export default function AdminDashboard() {
   const [view, setView] = useState<ViewMode>("calendar");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("alpha");
+  const [, setShowOverdue] = useState(false);
+  const [, setShowUnsigned] = useState(false);
 
   // New lead modal
   const [newOpen, setNewOpen] = useState(false);
@@ -60,11 +117,6 @@ export default function AdminDashboard() {
     setLeadOpen(false);
   };
 
-  // Alerts counts
-  const overdueCount   = useMemo(() => leads.filter(l => l.stage !== "completed" && !l.lastContactAt).length, [leads]);
-  const unsignedCount  = 0;
-  const unpaidCount    = 0;
-
   // Filter + sort for Leads view
   const visibleLeads = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -74,10 +126,12 @@ export default function AdminDashboard() {
       return hay.includes(q);
     });
 
-    const dateOrNull = (d: any) => (d ? new Date(d).getTime() : Number.NaN);
-    const stageRank: Record<string, number> = {
-      new: 1, contacted: 2, deposit: 3, trial: 4, booked: 5, confirmed: 6, changes: 7, completed: 8
-    };
+    const dateOrNull = (d: any) =>
+      d ? new Date(d).getTime() : Number.NaN;
+    const stageRank = STAGES.reduce<Record<string, number>>((acc, stage, index) => {
+      acc[stage] = index;
+      return acc;
+    }, {});
 
     arr.sort((a, b) => {
       switch (sort) {
@@ -149,7 +203,11 @@ export default function AdminDashboard() {
         {/* RIGHT: Main content */}
         <section className="col-span-12 lg:col-span-9 grid gap-3">
           <div className="wglass panel">
-            <HeaderAlerts leads={leads} overdue={overdueCount} unsigned={unsignedCount} unpaid={unpaidCount} />
+            <HeaderAlerts
+              leads={leads}
+              onOpenOverdue={() => setShowOverdue(true)}
+              onOpenUnsigned={() => setShowUnsigned(true)}
+            />
           </div>
 
           <div className="wglass panel">

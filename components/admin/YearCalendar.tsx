@@ -18,33 +18,54 @@ type Props = {
   onDayClick?: (date: Date) => void;
 };
 
-export default function YearCalendar({ year = new Date().getFullYear(), events, leads, sales, range, onDayClick }: Props) {
+export default function YearCalendar({
+  year = new Date().getFullYear(),
+  events,
+  leads,
+  sales,
+  range,
+  onDayClick,
+}: Props) {
   const months = eachMonthOfInterval({ start: startOfYear(new Date(year, 0, 1)), end: endOfYear(new Date(year, 11, 31)) });
 
   // preindex: map day -> info
   const dayMap = useMemo(() => {
     const map = new Map<string, { booked: boolean; categories: Set<'guide'|'service'|'both'> }>();
-    for (const e of events) {
-      if (!e.start) continue;
-      const key = format(e.start, 'yyyy-MM-dd');
+    const eventList = Array.isArray(events) ? events : [];
+    const leadList = Array.isArray(leads) ? leads : [];
+    const saleList = Array.isArray(sales) ? sales : [];
+
+    for (const e of eventList) {
+      const startValue = e?.start ?? null;
+      if (!startValue) continue;
+      const startDate = new Date(startValue);
+      if (Number.isNaN(startDate.getTime())) continue;
+      const key = format(startDate, 'yyyy-MM-dd');
       const m = map.get(key) ?? { booked: false, categories: new Set() };
-      if (e.status === 'booked' || e.status === 'completed') m.booked = true;
+      if (e?.status === 'booked' || e?.status === 'completed') m.booked = true;
       // category from lead
-      const lead = e.leadId ? leads.find(l => l.id === e.leadId) : undefined;
-      if (lead?.category) m.categories.add(lead.category === 'both' ? 'both' : 'service');
+      const lead = e?.leadId ? leadList.find((l) => l.id === e.leadId) : undefined;
+      if (lead?.category) m.categories.add(lead.category);
       map.set(key, m);
     }
-    for (const s of sales) {
-      const key = format(s.date, 'yyyy-MM-dd');
+    for (const s of saleList) {
+      const created = s?.createdAt ? new Date(s.createdAt) : null;
+      if (!created || Number.isNaN(created.getTime())) continue;
+      const key = format(created, 'yyyy-MM-dd');
       const m = map.get(key) ?? { booked: false, categories: new Set() };
-      if (s.type === 'guide') m.categories.add('guide');
+      if (s?.type === 'guide') m.categories.add('guide');
       map.set(key, m);
     }
     return map;
   }, [events, leads, sales]);
 
+  const startRaw = range?.start ? new Date(range.start) : undefined;
+  const endRaw = range?.end ? new Date(range.end) : undefined;
+  const startRange = startRaw && !Number.isNaN(startRaw.getTime()) ? startRaw : undefined;
+  const endRange = endRaw && !Number.isNaN(endRaw.getTime()) ? endRaw : undefined;
+
   const inRange = (d: Date) =>
-    !range?.start || !range?.end ? true : isWithinInterval(d, { start: range.start, end: range.end! });
+    !startRange || !endRange ? true : isWithinInterval(d, { start: startRange, end: endRange });
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">

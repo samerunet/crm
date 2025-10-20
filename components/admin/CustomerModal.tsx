@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { Lead } from "./types";
+import { Lead, STAGES } from "./types";
 
 /** Local shapes stored on the Lead object (kept inline so you don't have to edit types.ts now) */
 type AnyLead = Lead & Record<string, any>;
@@ -67,8 +67,9 @@ export default function CustomerModal({
   };
 
   // derived helpers
-  const toISODate = (d?: any) => (d ? new Date(d).toISOString().slice(0, 10) : "");
-  const fromISODate = (s: string) => (s ? new Date(s) : undefined);
+  const toISODate = (d?: any) =>
+    d ? new Date(d).toISOString().slice(0, 10) : "";
+  const fromISODate = (s: string) => (s ? `${s}T00:00:00` : undefined);
 
   return (
     <div className="fixed inset-0 z-[100]">
@@ -245,7 +246,7 @@ function DetailsView({
   model: AnyLead;
   setField: (k: keyof AnyLead, v: any) => void;
   toISODate: (d?: any) => string;
-  fromISODate: (s: string) => Date | undefined;
+  fromISODate: (s: string) => string | undefined;
 }) {
   return (
     <div className="grid sm:grid-cols-2 gap-3">
@@ -253,9 +254,15 @@ function DetailsView({
         <input className="crm-input" value={model.name || ""} onChange={(e) => setField("name", e.target.value)} />
       </Field>
       <Field label="Stage">
-        <select className="crm-input" value={model.stage} onChange={(e) => setField("stage", e.target.value)}>
-          {["new","contacted","deposit","trial","booked","confirmed","changes","completed"].map((s) => (
-            <option key={s} value={s}>{s}</option>
+        <select
+          className="crm-input"
+          value={model.stage}
+          onChange={(e) => setField("stage", e.target.value)}
+        >
+          {STAGES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
       </Field>
@@ -272,7 +279,12 @@ function DetailsView({
           type="date"
           className="crm-input"
           value={toISODate(model.dateOfService)}
-          onChange={(e) => setField("dateOfService", e.target.value ? fromISODate(e.target.value) : undefined)}
+          onChange={(e) =>
+            setField(
+              "dateOfService",
+              e.target.value ? fromISODate(e.target.value) : undefined
+            )
+          }
         />
       </Field>
       <Field label="Location">

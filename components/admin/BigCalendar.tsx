@@ -4,7 +4,7 @@
 import React from 'react';
 import { Calendar, dateFnsLocalizer, SlotInfo } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
-import enUS from 'date-fns/locale/en-US';
+import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import type { Appointment } from './types';
 
@@ -28,11 +28,26 @@ export default function BigCalendar({
   onOpenEvent: (appt: Appointment) => void;
   eventStyle?: (e: Appointment) => React.CSSProperties | undefined;
 }) {
+  const normalizedEvents = (Array.isArray(events) ? events : []).map((evt) => {
+    const start = evt?.start ? new Date(evt.start) : undefined;
+    const end = evt?.end ? new Date(evt.end) : undefined;
+    return {
+      ...evt,
+      start: start && !Number.isNaN(start.getTime()) ? start : new Date(),
+      end:
+        end && !Number.isNaN(end.getTime())
+          ? end
+          : start && !Number.isNaN(start.getTime())
+          ? new Date(start.getTime() + 60 * 60 * 1000)
+          : new Date(),
+    };
+  });
+
   return (
     <div className="rounded-2xl shadow p-3 bg-white dark:bg-neutral-900">
       <Calendar
         localizer={localizer}
-        events={events}
+        events={normalizedEvents}
         startAccessor="start"
         endAccessor="end"
         defaultView="week"
