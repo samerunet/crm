@@ -11,3 +11,12 @@ prisma/dev.db
 .env
 .env.*
 !.env.example
+node_modules
+.next
+.turbo
+.vercel
+out
+.DS_Store
+.env
+.env.*
+!.env.example
