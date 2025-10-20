@@ -1,5 +1,5 @@
 // lib/auth.ts
-import { prisma } from "./db";
+import { prisma } from "./prisma-node";
 import { verifyPassword } from "./password";
 
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
