@@ -1,7 +1,7 @@
 // FILE: components/sections/about.tsx  (DROP-IN: banner is separate above image)
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import BookingBanner from "@/components/sections/booking-banner";
 import ServiceModal from "./service-modal";
@@ -17,7 +17,7 @@ export default function AboutSection() {
   const [modal, setModal] = useState<{
     title: string;
     img: string;
-    body: React.ReactNode;
+    body: ReactNode;
   } | null>(null);
 
   return (

@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
 
 const LOOKBOOK: { src: string; alt: string }[] = [
   { src: "/portfolio/IMG_7267.JPG", alt: "San Diego bridal makeup — soft glam (IMG_7267)" },
@@ -40,8 +40,8 @@ export default function HeroLanding() {
 
   // swipe (mobile)
   const touchStartX = useRef<number | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => (touchStartX.current = e.changedTouches[0].clientX);
-  const onTouchEnd = (e: React.TouchEvent) => {
+  const onTouchStart = (e: TouchEvent<HTMLDivElement>) => (touchStartX.current = e.changedTouches[0].clientX);
+  const onTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
     if (touchStartX.current == null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;

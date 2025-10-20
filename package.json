@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
+    "dev:legacy": "next dev",
     "build": "prisma generate --no-engine && next build",
     "postinstall": "prisma generate --no-engine",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint --ext .js,.ts,.tsx .",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm run lint && pnpm run typecheck",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
@@ -33,20 +36,28 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@eslint/js": "^9.38.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
+    "@types/node": "^20.19.22",
+    "@types/react": "^19.2.2",
     "@types/react-big-calendar": "^1.16.3",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
+    "@types/react-dom": "^19.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "@vercel/speed-insights": "^1.2.0",
+    "eslint": "^9.38.0",
     "eslint-config-next": "15.5.4",
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-unicorn": "^61.0.2",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.7.1",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5",
+    "typescript": "^5.9.3",
     "vercel": "^48.4.1"
   },
   "engines": {
-    "node": ">=20.18.1 <21"
+    "node": "20.x"
   }
 }

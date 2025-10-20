@@ -7,7 +7,6 @@ if (
   process.env.DEV_ALLOW_INSECURE_TLS === "1"
 ) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const undici = require("undici") as typeof import("undici");
     undici.setGlobalDispatcher(
       new undici.Agent({
@@ -33,17 +32,19 @@ const SITE_CONTACT_TO =
 
 const resend = new Resend(RESEND_API_KEY);
 
+type JsonInit = Parameters<typeof NextResponse.json>[1];
+
 function maskKey(key?: string) {
   if (!key) return "(not set)";
   if (key.length < 8) return "(set)";
   return key.slice(0, 3) + "…" + key.slice(-4);
 }
 
-function ok(data: any, init?: number | ResponseInit) {
+function ok(data: any, init?: number | JsonInit) {
   const initObj = typeof init === "number" ? { status: init } : init;
   return NextResponse.json({ ok: true, ...data }, initObj);
 }
-function fail(error: any, init?: number | ResponseInit) {
+function fail(error: any, init?: number | JsonInit) {
   const initObj = typeof init === "number" ? { status: init } : init;
   const message =
     typeof error === "string" ? error : error?.message || String(error);

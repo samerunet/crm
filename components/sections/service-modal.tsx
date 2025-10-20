@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import Image from "next/image";
 
 export default function ServiceModal({
@@ -13,7 +15,7 @@ export default function ServiceModal({
   onClose: () => void;
   title: string;
   image: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   if (!open) return null;
   return (

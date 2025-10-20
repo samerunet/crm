@@ -1,7 +1,8 @@
 // components/ui/booking-provider.tsx
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+
 import BookingModal from "./booking-modal";
 
 type Service = { id: string; title: string } | null;
@@ -22,7 +23,7 @@ const DEFAULT_ADDONS: AddOn[] = [
   { id: "trial2", label: "Second trial" },
 ];
 
-export function BookingProvider({ children }: { children: React.ReactNode }) {
+export function BookingProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [service, setService] = useState<Service>(null);
   const [addOns, setAddOns] = useState<AddOn[]>(DEFAULT_ADDONS);

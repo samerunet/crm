@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 export default function ContactForm() {
 	const [state, setState] = useState<"idle" | "sending" | "ok" | "err">("idle");
@@ -13,7 +13,7 @@ export default function ContactForm() {
 		message: "",
 	});
 
-	async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+	async function onSubmit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setErr(null);
 		setState("sending");

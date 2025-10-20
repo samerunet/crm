@@ -1,13 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { NextRequest, NextResponse } from 'next/server';
+import { Resend } from 'resend';
 // Force IPv4 DNS resolution in Node (fixes local fetch/cert oddities)
-import dns from "node:dns";
-dns.setDefaultResultOrder("ipv4first");
+import dns from 'node:dns';
+dns.setDefaultResultOrder('ipv4first');
 
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
 
-function json(data: any, init?: ResponseInit) {
-	return NextResponse.json(data, init);
+type JsonInit = Parameters<typeof NextResponse.json>[1];
+
+function json(data: unknown, init?: number | JsonInit) {
+	const initObj = typeof init === 'number' ? { status: init } : init;
+	return NextResponse.json(data, initObj);
 }
 
 function isDev() {
