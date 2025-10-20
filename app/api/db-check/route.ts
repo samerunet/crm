@@ -1,6 +1,6 @@
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma-edge';
+import { prisma } from '@/lib/prisma-node';
 export async function GET() {
   try {
     const [leadCount, userCount] = await Promise.all([

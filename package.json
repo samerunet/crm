@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
-			"build": "npm run postinstall && next build",
+		"build": "prisma generate --no-engine && next build",
 		"postinstall": "prisma generate --no-engine",
 		"db:migrate": "prisma migrate deploy",
 		"db:push": "prisma db push",
@@ -47,6 +47,6 @@
 		"vercel": "^48.4.1"
 	},
 	"engines": {
-		"node": ">=18.18 <=22"
+		"node": "20.x"
 	}
 }

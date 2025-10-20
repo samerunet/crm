@@ -4,11 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  // Runtime uses Accelerate from `.env`; do not change `.env` value.
-  url       = env("DATABASE_URL")
-  // Optional: uncomment if/when we provide a classic Postgres URL for CLI tasks.
-  // directUrl = env("DIRECT_DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
