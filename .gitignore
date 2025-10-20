@@ -7,3 +7,7 @@ node_modules
 dist
 coverage
 prisma/dev.db
+# env
+.env
+.env.*
+!.env.example
