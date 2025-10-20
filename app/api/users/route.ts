@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma-edge';
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const take = Math.min(Number(searchParams.get('take') ?? 25), 100);
@@ -17,15 +18,20 @@ export async function GET(req: Request) {
   const nextCursor = rows.length > take ? rows[take].id : null;
   return NextResponse.json({ items: rows.slice(0, take), nextCursor });
 }
+
 export async function POST(req: Request) {
-  const body = await req.json();
-  const user = await prisma.user.create({
-    data: {
-      name: body.name ?? null,
-      email: body.email ?? null,
-      image: body.image ?? null,
-      role: body.role ?? 'user'
-    }
-  });
-  return NextResponse.json(user, { status: 201 });
+  try {
+    const body = await req.json();
+    const user = await prisma.user.create({
+      data: {
+        name: body.name ?? null,
+        email: body.email ?? null,
+        image: body.image ?? null,
+        role: body.role ?? 'user'
+      }
+    });
+    return NextResponse.json(user, { status: 201 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? 'invalid' }, { status: 400 });
+  }
 }
