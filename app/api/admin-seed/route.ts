@@ -1,7 +1,6 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma-node';
-
 export async function POST(req: Request) {
   const { email = 'admin@farimakeup.com', name = 'Fari Admin' } = await req.json().catch(() => ({}));
   const now = new Date();
