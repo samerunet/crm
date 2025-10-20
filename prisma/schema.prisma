@@ -4,8 +4,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"          // using SQLite locally
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  // Runtime uses Accelerate from `.env`; do not change `.env` value.
+  url       = env("DATABASE_URL")
+  // Optional: uncomment if/when we provide a classic Postgres URL for CLI tasks.
+  // directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model User {
