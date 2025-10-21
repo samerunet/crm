@@ -48,14 +48,15 @@ export default function AboutSection() {
         {/* HERO IMAGE */}
         <div className="relative h-[62vh] min-h-[520px] md:h-[640px]">
           <Image
-            src="/portfolio/12.JPG" // ensure this exists in /public/portfolio
+            src="/portfolio/12.JPG"
             alt="Luxury bridal makeup — soft, skin-focused glam"
             fill
             priority
-            quality={90}
+            fetchPriority="high"
+            quality={65}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 50vw"
             className="object-cover"
             style={{ objectPosition: "50% 35%" }}
-            sizes="100vw"
           />
           {/* subtle tint for readability (kept, but no text overlay anymore) */}
           <div
@@ -104,8 +105,8 @@ export default function AboutSection() {
                     alt={c.label}
                     fill
                     className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                    sizes="(max-width: 640px) 50vw, 25vw"
-                    quality={85}
+                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 25vw, 240px"
+                    quality={65}
                   />
                 </div>
                 <div className="mt-2 rounded-lg bg-card/85 px-3 py-2 text-center text-[13px] font-medium backdrop-blur">

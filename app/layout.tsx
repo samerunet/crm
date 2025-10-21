@@ -38,6 +38,9 @@ export const metadata: Metadata = {
     images: ['/og/hero.jpg'],
   },
   icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
+  verification: {
+    google: '-cwOr0RxS8EOx34LSK-TDrtz09nrsEPjC1vn05djVm8',
+  },
 };
 
 export const viewport: Viewport = {
