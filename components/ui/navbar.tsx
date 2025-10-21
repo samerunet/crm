@@ -116,7 +116,7 @@ export default function Navbar() {
       { href: '/',           label: 'Home' },
       { href: '/services',   label: 'Services' },
       { href: '/portfolio',  label: 'Portfolio' },
-      { href: '/courses',    label: 'Reviews' }, // points to existing /courses route for now
+      { href: '/reviews',    label: 'Reviews' },
       { href: '/faq',        label: 'FAQ' },
       { href: '/about',      label: 'About' },
     ],

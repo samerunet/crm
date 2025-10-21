@@ -24,15 +24,6 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <main>
-      <section className="f-container text-muted-foreground mt-4 text-base leading-7">
-        <p>
-          Bridal makeup artist in San Diego offering luxury, soft-glam looks for weddings and
-          events. Serving Orange County and Los Angeles with on-location styling. Need help planning
-          your wedding-day makeup timeline or product recommendations? I&apos;ll guide you from trial to
-          final touch-ups.
-        </p>
-      </section>
-
       <section className="mt-4">
         <AboutFari />
       </section>

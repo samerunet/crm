@@ -1,52 +1,115 @@
+// app/services/_components/services-client.tsx
 'use client';
 
-import { useRef, useState, type MouseEvent } from 'react';
-
+import { useRef, useState, type MouseEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useBooking } from '@/components/ui/booking-provider';
 
 type Service = {
   id: string;
+  emoji?: string;
   title: string;
-  blurb: string;
-  features: string[];
+  serviceLine: string;
+  duration: string;
+  rate?: string;
+  includes: string[];
+  addons?: string[];
+  note?: string;
 };
 
 const SERVICES: Service[] = [
   {
     id: 'bridal-day',
-    title: 'Bridal Day-Of Makeup',
-    blurb: 'Long-wear, photo-perfect complexion with soft glam finishing.',
-    features: ['Skin prep & lashes', 'Touch-up kit', 'On-location available'],
-  },
-  {
-    id: 'bridal-trial',
-    title: 'Bridal Trial',
-    blurb: 'Dial in your exact wedding-day look with before/after photos.',
-    features: ['Look planning', 'Product mapping', 'Photography test'],
+    emoji: '💍',
+    title: 'Bridal Makeup',
+    serviceLine: 'Service: Bridal Makeup',
+    duration: 'Duration: 1 hr 15 min – 1 hr 30 min',
+    includes: [
+      'Full luxury skin prep',
+      'Works with all skin tones, eye shapes & maternity skin',
+      'Customized long-lasting makeup (natural glam, soft glam, full glam)',
+      'Individual or strip lashes',
+      'Prep list for glam',
+      'On-location or in-studio service',
+    ],
+    addons: [
+      'Trial appointment',
+      'Stay for touch-ups or a second look',
+      'Hair services by hairstylist upon request',
+    ],
   },
   {
     id: 'bridal-party',
-    title: 'Bridesmaids / Party',
-    blurb: 'Cohesive glam that photographs beautifully as a group.',
-    features: ['Coordinated palette', 'Lashes included', 'Fast & polished'],
+    emoji: '👰‍♀️',
+    title: 'Bridal Party Makeup',
+    serviceLine: 'Service: Bridesmaids / Mother of the Bride / Guests',
+    duration: 'Duration: 35–45 min per person',
+    includes: [
+      'Long-lasting event makeup (natural glam, soft glam)',
+      'Lashes included',
+      'Timeline coordinated with the bride’s schedule',
+    ],
+    addons: ['Hair services by hairstylist upon request'],
   },
   {
-    id: 'events-glam',
-    title: 'Special Events Glam',
-    blurb: 'Soft to full glam for showers, engagements, and nights out.',
-    features: ['Event-ready wear', 'Customized intensity', 'Optional hair partner'],
+    id: 'special-occasion',
+    emoji: '💫',
+    title: 'Special Occasion Makeup',
+    serviceLine: 'Service: Event • Engagement • Birthday • Photoshoot',
+    duration: 'Duration: 1 hour',
+    includes: [
+      'Skin prep',
+      'Lashes included',
+      'Long-lasting glam for any occasion',
+      'Available in studio or on-location (travel minimum may apply)',
+    ],
+    addons: ['Hair services by team hairstylists upon request'],
   },
   {
     id: 'editorial',
-    title: 'Editorial / Photoshoot',
-    blurb: 'Modern, camera-ready looks for studio or on-location shoots.',
-    features: ['Creative direction', 'On-set touch-ups', 'Half-day / full-day'],
+    emoji: '🖤',
+    title: 'Editorial & Brand Work',
+    serviceLine: 'Service: Campaign • Fashion • Branding',
+    duration: 'Duration: Based on project requirements',
+    rate: 'Rate: Custom quote',
+    includes: [
+      'Makeup tailored for photo + video',
+      'On-set touch-ups throughout the shoot',
+      'Collaboration with the creative team',
+    ],
+    addons: ['Hair services by hairstylist upon request'],
   },
   {
-    id: 'lessons',
-    title: 'Private Lessons',
-    blurb: 'Hands-on technique session tailored to your features & kit.',
-    features: ['Face chart', 'Kit audit', 'Step-by-step routine'],
+    id: 'studio',
+    emoji: '📸',
+    title: 'Studio Appointments',
+    serviceLine: 'Service: In-Studio Makeup (San Diego)',
+    duration: 'Duration: 1 hour',
+    includes: [
+      'Private studio appointment',
+      'Lashes included',
+      'Natural glam • Soft glam • Full glam',
+      'Ideal for special occasions, maternity, portraits',
+    ],
+    addons: ['Hair services by hairstylist upon request'],
+  },
+  {
+    id: 'destination',
+    emoji: '✈️',
+    title: 'Destination Weddings',
+    serviceLine: 'Service: On-location Bridal (outside San Diego / International)',
+    duration: 'Duration: Varies by event schedule',
+    includes: [
+      'Luxury bridal makeup for the bride',
+      'Optional makeup for bridesmaids / family',
+      'Skin prep, lashes, and personalized service',
+      'Assistance with schedule and travel coordination',
+    ],
+    addons: [
+      'Hair services by hairstylist',
+      'Touch-up services',
+      'Bridal trial',
+      'Travel fee calculated per destination',
+    ],
   },
 ];
 
@@ -65,7 +128,7 @@ export default function ServicesClient() {
 
       <div className="specular glass-2 -mx-3 overflow-hidden rounded-[22px] sm:-mx-6 md:rounded-[28px]">
         <div className="p-4 sm:p-6 md:p-8">
-          <header className="mb-4 sm:mb-6">
+          <header className="mb-4 text-center sm:mb-6">
             <h1
               className="font-serif text-[28px] font-semibold tracking-tight sm:text-[34px] md:text-[40px]"
               style={{ fontFamily: '"Playfair Display", ui-serif, Georgia, serif' }}
@@ -91,6 +154,22 @@ export default function ServicesClient() {
   );
 }
 
+function Pill({ children }: { children: ReactNode }) {
+  return (
+    <span className="border-border/60 bg-card/70 text-foreground/80 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium">
+      {children}
+    </span>
+  );
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h4 className="text-foreground/60 mt-4 text-[11px] font-semibold tracking-[0.18em] uppercase">
+      {children}
+    </h4>
+  );
+}
+
 function ServiceCard({ service }: { service: Service }) {
   const booking = useBooking();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -105,12 +184,10 @@ function ServiceCard({ service }: { service: Service }) {
     const y = e.clientY - rect.top;
     const px = x / rect.width;
     const py = y / rect.height;
-
     const MAX = 6;
     const ry = (px - 0.5) * (MAX * 2);
     const rx = -(py - 0.5) * (MAX * 2);
     setTilt({ rx, ry });
-
     setGlow({ x: Math.round(px * 100), y: Math.round(py * 100) });
   }
 
@@ -119,12 +196,28 @@ function ServiceCard({ service }: { service: Service }) {
     setGlow({ x: 50, y: 50 });
   }
 
+  function book() {
+    booking.open({ id: service.id, title: service.title });
+  }
+
+  function onKey(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      book();
+    }
+  }
+
   return (
     <article
       ref={ref}
+      role="button"
+      tabIndex={0}
+      aria-label={`Send inquiry for ${service.title}`}
+      onClick={book}
+      onKeyDown={onKey}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      className="group border-border relative overflow-hidden rounded-2xl border p-5 transition-transform will-change-transform [transform-style:preserve-3d] sm:p-6 md:p-7"
+      className="group border-border focus-visible:ring-primary/60 relative h-full min-h-[480px] cursor-pointer overflow-hidden rounded-2xl border p-5 transition-transform will-change-transform outline-none [transform-style:preserve-3d] focus-visible:ring-2 sm:p-6 md:p-7"
       style={{
         background: 'color-mix(in oklab, var(--card) 60%, transparent)',
         backdropFilter: 'blur(18px) saturate(120%)',
@@ -134,6 +227,7 @@ function ServiceCard({ service }: { service: Service }) {
         transform: `perspective(900px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
       }}
     >
+      {/* sheen + glow */}
       <span
         aria-hidden
         className="pointer-events-none absolute -inset-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -144,7 +238,6 @@ function ServiceCard({ service }: { service: Service }) {
           animation: 'sheen-scan 1200ms ease-out forwards',
         }}
       />
-
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -154,44 +247,50 @@ function ServiceCard({ service }: { service: Service }) {
         }}
       />
 
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-2xl"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,0) 40%) top/100% 60% no-repeat',
-          mixBlendMode: 'screen',
-        }}
-      />
+      {/* content column */}
+      <div className="relative z-10 flex h-full flex-col text-center">
+        <h3 className="text-lg font-semibold tracking-tight md:text-xl">
+          {service.emoji ? <span className="mr-1.5">{service.emoji}</span> : null}
+          {service.title}
+        </h3>
 
-      <h3 className="relative z-10 text-lg font-semibold tracking-tight md:text-xl">
-        {service.title}
-      </h3>
-      <p className="text-foreground/85 relative z-10 mt-1 text-sm">{service.blurb}</p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <Pill>{service.serviceLine}</Pill>
+          <Pill>{service.duration}</Pill>
+          {service.rate ? <Pill>{service.rate}</Pill> : null}
+        </div>
 
-      <ul className="text-foreground/75 relative z-10 mt-3 space-y-1.5 text-sm">
-        {service.features.map((feature) => (
-          <li key={feature} className="flex gap-2">
-            <span className="bg-accent mt-[7px] size-[6px] rounded-full" />
-            {feature}
-          </li>
-        ))}
-      </ul>
+        <div className="bg-border/70 mx-auto my-4 h-px w-16" />
 
-      <div className="relative z-10 mt-5 flex flex-wrap gap-2">
-        <button
-          onClick={() => booking.open({ id: service.id, title: service.title })}
-          className="bg-primary text-primary-foreground rounded-xl px-4 py-2 text-sm font-medium shadow transition-transform hover:scale-[1.02] active:scale-[0.99]"
-          style={{ boxShadow: '0 14px 34px rgba(0,0,0,0.24)' }}
-        >
-          Book Now
-        </button>
-        <a
-          href="/portfolio"
-          className="border-border bg-card/60 hover:bg-accent/15 rounded-xl border px-4 py-2 text-sm font-medium backdrop-blur transition-colors"
-        >
-          View Work
-        </a>
+        <SectionTitle>Includes</SectionTitle>
+        <ul className="text-foreground/80 mx-auto mt-2 max-w-[46ch] space-y-1.5 text-left text-sm">
+          {service.includes.map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="bg-accent mt-[7px] size-[6px] rounded-full" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+
+        {service.addons?.length ? (
+          <>
+            <div className="bg-border/50 mx-auto my-4 h-px w-10" />
+            <SectionTitle>Optional add-ons</SectionTitle>
+            <ul className="text-foreground/70 mx-auto mt-2 max-w-[46ch] space-y-1.5 text-left text-sm">
+              {service.addons.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="bg-border/80 mt-[7px] size-[6px] rounded-full" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+
+        {/* sticky bottom hint */}
+        <div className="text-foreground/60 mt-auto pt-5 text-xs tracking-wide uppercase">
+          Send inquiry
+        </div>
       </div>
     </article>
   );
