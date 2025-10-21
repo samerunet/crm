@@ -23,6 +23,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
+    "tsBuildInfoFile": ".next/cache/typecheck.tsbuildinfo",
     "types": [],
     "plugins": [
       {

@@ -41,11 +41,13 @@ function SignInForm() {
     const cb = params.get("callbackUrl");
     if (cb) {
       router.replace(cb);
+      router.refresh();
       return;
     }
 
     // role-based default landing
     router.replace(role === "ADMIN" ? "/admin" : "/dashboard");
+    router.refresh();
   }
 
   return (

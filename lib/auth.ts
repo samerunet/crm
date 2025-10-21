@@ -1,7 +1,6 @@
 // lib/auth.ts
-import { prisma } from "./db";
+import { prisma } from "@/lib/prisma-node";
 import { verifyPassword } from "./password";
-
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
@@ -9,11 +8,9 @@ import { getServerSession } from "next-auth";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
-
-  // Use JWT for credentials provider
   session: { strategy: "jwt" },
-
   providers: [
     Credentials({
       name: "Credentials",
@@ -21,26 +18,22 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(creds) {
-        if (!creds?.email || !creds?.password) return null;
-
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
         const user = await prisma.user.findUnique({
-          where: { email: creds.email.toLowerCase() },
+          where: { email: credentials.email.toLowerCase() },
           select: {
             id: true,
             email: true,
             name: true,
             image: true,
             role: true,
-            passwordHash: true, // must exist in your schema + DB
+            passwordHash: true,
           },
         });
-        if (!user || !user.passwordHash) return null;
-
-        const ok = await verifyPassword(creds.password, user.passwordHash);
-        if (!ok) return null;
-
-        // What gets embedded into the JWT
+        if (!user?.passwordHash) return null;
+        const valid = await verifyPassword(credentials.password, user.passwordHash);
+        if (!valid) return null;
         return {
           id: user.id,
           email: user.email,
@@ -51,22 +44,19 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as any).role ?? "USER";
+      if (user) token.role = (user as any)?.role ?? "USER";
       return token;
     },
     async session({ session, token }) {
-      (session.user as any).role = (token as any).role ?? "USER";
+      if (session.user) (session.user as any).role = (token as any)?.role ?? "USER";
       return session;
     },
   },
-
   pages: {
     signIn: "/auth/sign-in",
   },
 };
 
-// Helper for server components/layouts
 export const auth = () => getServerSession(authOptions);
