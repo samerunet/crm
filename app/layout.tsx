@@ -37,7 +37,9 @@ export const metadata: Metadata = {
       'Soft, camera-ready glam for weddings, editorials, and events across San Diego, OC, LA & destinations.',
     images: ['/og/hero.jpg'],
   },
-  icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
+  icons: {
+    icon: '/favicon.svg',
+  },
   verification: {
     google: '-cwOr0RxS8EOx34LSK-TDrtz09nrsEPjC1vn05djVm8',
   },

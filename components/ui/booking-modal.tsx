@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 
 type Service = { id: string; title: string } | undefined;
@@ -9,7 +9,10 @@ type AddOn = { id: string; label: string; price?: string };
 type DoneState = { type: 'success' | 'error'; msg: string } | null;
 type Step = 'service' | 'contact' | 'details' | 'addons' | 'review';
 
-/* Helpers */
+const MIN_PARTY = 1;
+const MAX_PARTY = 15;
+
+/* ---------- utils ---------- */
 function toDateInputValue(d: Date) {
   const y = d.getFullYear();
   const m = `${d.getMonth() + 1}`.padStart(2, '0');
@@ -18,7 +21,22 @@ function toDateInputValue(d: Date) {
 }
 function clampPartySize(v: number) {
   if (Number.isNaN(v)) return '';
-  return Math.max(1, Math.min(15, v));
+  return Math.max(MIN_PARTY, Math.min(MAX_PARTY, v));
+}
+
+/* inject minimal keyframes + input “cute” focus ring once */
+const KF_ID = 'booking-modern-kf';
+if (typeof document !== 'undefined' && !document.getElementById(KF_ID)) {
+  const css = `
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes sheetIn  { from { opacity: .0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes pulseDot { 0%, 100% { transform: scale(1); opacity: .6 } 50% { transform: scale(1.18); opacity: 1 } }
+.modern-input:focus{ outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,.18), inset 0 0 0 1px rgba(255,255,255,.28) }
+`;
+  const el = document.createElement('style');
+  el.id = KF_ID;
+  el.textContent = css;
+  document.head.appendChild(el);
 }
 
 export default function BookingModal({
@@ -46,8 +64,9 @@ export default function BookingModal({
 
   const firstStep: Step = service?.title ? 'contact' : 'service';
   const [step, setStep] = useState<Step>(firstStep);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
-  // Date window: today → +2 years (prevents 9999 etc.)
+  // Date window: today → +2 years
   const minDate = useMemo(() => toDateInputValue(new Date()), []);
   const maxDate = useMemo(() => {
     const d = new Date();
@@ -55,7 +74,7 @@ export default function BookingModal({
     return toDateInputValue(d);
   }, []);
 
-  // lock body scroll only while open
+  // lock scroll while open
   useEffect(() => {
     const prev = document.documentElement.style.overflow;
     if (open) document.documentElement.style.overflow = 'hidden';
@@ -64,7 +83,7 @@ export default function BookingModal({
     };
   }, [open]);
 
-  // if a service arrives later, skip the service step
+  // sync externally-passed service
   useEffect(() => {
     if (initialService && !service) {
       setService(initialService);
@@ -72,6 +91,32 @@ export default function BookingModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialService]);
+
+  // ESC to close
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && open) onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  // Keyboard-aware bottom bar (iOS Safari etc.)
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    const apply = () => {
+      const kb = vv && window.innerHeight - vv.height > 60 ? window.innerHeight - vv.height : 0;
+      document.documentElement.style.setProperty('--kb', kb + 'px');
+    };
+    apply();
+    vv?.addEventListener('resize', apply);
+    vv?.addEventListener('scroll', apply);
+    return () => {
+      vv?.removeEventListener('resize', apply);
+      vv?.removeEventListener('scroll', apply);
+      document.documentElement.style.removeProperty('--kb');
+    };
+  }, []);
 
   const toggleAddOn = (id: string) =>
     setSelAddOns((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
@@ -92,7 +137,7 @@ export default function BookingModal({
     return encodeURIComponent(lines.join('\n'));
   }, [name, email, phone, service, date, location, partySize, selAddOns, notes]);
 
-  // DETAILS step validation (date window + party size 1..15)
+  // details validation
   const detailsError = useMemo(() => {
     if (date) {
       const v = new Date(`${date}T00:00:00`);
@@ -101,11 +146,19 @@ export default function BookingModal({
       if (v < lo) return 'Please choose today or a future date.';
       if (v > hi) return `Please choose a date on or before ${maxDate}.`;
     }
-    if (partySize !== '' && (partySize < 1 || partySize > 15)) {
-      return 'Party size must be between 1 and 15.';
+    if (partySize !== '' && (partySize < MIN_PARTY || partySize > MAX_PARTY)) {
+      return `Party size must be between ${MIN_PARTY} and ${MAX_PARTY}.`;
     }
     return null;
   }, [date, partySize, minDate, maxDate]);
+
+  // Scroll first invalid field into view when hitting Next
+  function scrollFirstInvalid() {
+    const host = contentRef.current;
+    if (!host) return;
+    const invalid = host.querySelector<HTMLElement>('[data-invalid="true"]');
+    invalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   const canNext = (() => {
     switch (step) {
@@ -114,7 +167,7 @@ export default function BookingModal({
       case 'contact':
         return name.trim().length > 1 && (email.trim().length > 3 || phone.trim().length > 6);
       case 'details':
-        return !detailsError; // block next if invalid date/party size
+        return !detailsError;
       case 'addons':
         return true;
       case 'review':
@@ -145,6 +198,7 @@ export default function BookingModal({
       if (!json.ok) throw new Error(json.error || 'Send failed');
       setDone({ type: 'success', msg: 'Sent! We’ll get back to you shortly.' });
       setTimeout(onClose, 900);
+      if (navigator.vibrate) navigator.vibrate(10);
     } catch (err: any) {
       setDone({ type: 'error', msg: err?.message || 'Send failed' });
     } finally {
@@ -153,7 +207,10 @@ export default function BookingModal({
   }
 
   function next() {
-    if (!canNext) return;
+    if (!canNext) {
+      scrollFirstInvalid();
+      return;
+    }
     setDone(null);
     if (step === 'service') setStep('contact');
     else if (step === 'contact') setStep('details');
@@ -161,7 +218,6 @@ export default function BookingModal({
     else if (step === 'addons') setStep('review');
     else if (step === 'review') submit();
   }
-
   function back() {
     setDone(null);
     if (step === 'review') setStep('addons');
@@ -178,61 +234,73 @@ export default function BookingModal({
   return (
     <div
       className={clsx(
-        'fixed inset-0 z-[100] transition',
+        'fixed inset-0 z-[100]',
         open ? 'opacity-100' : 'pointer-events-none opacity-0',
       )}
       aria-hidden={!open}
     >
+      {/* Backdrop */}
       <button
-        className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+        className="absolute inset-0 bg-[rgba(0,0,0,.58)] backdrop-blur-sm"
         aria-label="Close"
         onClick={onClose}
       />
+
+      {/* Sheet */}
       <div
         className={clsx(
-          'relative mx-auto flex h-[100dvh] w-full flex-col bg-[var(--card)] transition-transform',
-          open ? 'md:translate-y-0' : 'md:translate-y-2',
-          'md:border-border/70 md:my-6 md:h-[88dvh] md:max-w-lg md:rounded-2xl md:border md:shadow-[0_24px_70px_rgba(0,0,0,0.26)]',
+          'relative mx-auto flex h-[100dvh] w-full flex-col overflow-hidden',
+          'md:my-6 md:h-[88dvh] md:max-w-lg md:rounded-[22px] md:border md:border-white/10',
+          'bg-gradient-to-b from-white/14 via-white/[.07] to-white/[.05] text-[--foreground]',
+          'shadow-[0_24px_70px_rgba(0,0,0,0.26)]',
+          open && 'animate-[sheetIn_.22s_ease-out]',
         )}
         role="dialog"
         aria-modal="true"
         aria-labelledby="booking-title"
+        style={{
+          WebkitBackdropFilter: 'blur(16px) saturate(135%)',
+          backdropFilter: 'blur(16px) saturate(135%)',
+        }}
       >
-        {/* Header */}
-        <div className="border-border/60 flex items-center justify-between gap-3 border-b px-4 py-3">
-          <h2 id="booking-title" className="text-base font-semibold sm:text-lg">
-            {stepTitle(step, service?.title)}
-          </h2>
+        {/* soft glow */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div
+            className="absolute -top-10 left-[-10%] h-40 w-[120%] opacity-70 blur-3xl"
+            style={{
+              background:
+                'radial-gradient(60% 60% at 50% 0%, rgba(176,137,104,.28), transparent 70%)',
+            }}
+          />
+        </div>
 
+        {/* Header (kept slim on mobile) */}
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+          <div>
+            <div className="text-[10px] tracking-[0.22em] text-white/70 uppercase">Booking</div>
+            <h2 id="booking-title" className="text-base font-semibold sm:text-lg">
+              {stepTitle(step, service?.title)}
+            </h2>
+          </div>
           <div className="flex items-center gap-3">
-            <div className="text-foreground/60 hidden text-xs sm:inline">
-              Step {activeIndex + 1} of {steps.length}
-            </div>
+            <Dots count={steps.length} active={activeIndex} />
             <button
               onClick={onClose}
-              className="icon-chip inline-grid h-9 w-9 place-items-center rounded-xl"
+              className="inline-grid h-9 w-9 place-items-center rounded-xl border border-white/15 bg-white/[.08] hover:bg-white/[.14]"
               aria-label="Close"
             >
-              ×
+              ✕
             </button>
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="bg-border/40 h-1 w-full">
-          <div
-            className="bg-primary h-full transition-[width]"
-            style={{ width: `${((activeIndex + 1) / steps.length) * 100}%` }}
-          />
-        </div>
-
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-          {step === 'service' && (
+        <div ref={contentRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+          <Panel active={step === 'service'}>
             <ServiceStep selected={service?.id} onSelect={(s) => setService(s)} />
-          )}
+          </Panel>
 
-          {step === 'contact' && (
+          <Panel active={step === 'contact'}>
             <ContactStep
               name={name}
               email={email}
@@ -241,9 +309,9 @@ export default function BookingModal({
               onEmail={setEmail}
               onPhone={setPhone}
             />
-          )}
+          </Panel>
 
-          {step === 'details' && (
+          <Panel active={step === 'details'}>
             <DetailsStep
               serviceTitle={service?.title}
               date={date}
@@ -261,13 +329,13 @@ export default function BookingModal({
               }}
               onNotes={setNotes}
             />
-          )}
+          </Panel>
 
-          {step === 'addons' && (
+          <Panel active={step === 'addons'}>
             <AddOnsStep addOns={addOns} selected={selAddOns} toggle={toggleAddOn} />
-          )}
+          </Panel>
 
-          {step === 'review' && (
+          <Panel active={step === 'review'}>
             <ReviewStep
               name={name}
               email={email}
@@ -279,13 +347,14 @@ export default function BookingModal({
               addOns={selAddOns.map((id) => addOns.find((a) => a.id === id)?.label || id)}
               notes={notes}
             />
-          )}
+          </Panel>
 
           {done && (
             <p
+              role="status"
               className={clsx(
                 'mt-3 text-sm',
-                done.type === 'success' ? 'text-emerald-600' : 'text-destructive',
+                done.type === 'success' ? 'text-emerald-400' : 'text-rose-400',
               )}
             >
               {done.msg}
@@ -293,33 +362,37 @@ export default function BookingModal({
           )}
         </div>
 
-        {/* Sticky footer */}
-        <div className="border-border/60 border-t bg-[var(--card)] px-4 py-3 sm:px-5">
-          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <a
-              href={`sms:+16193996160?&body=${smsBody}`}
-              className="border-border/70 bg-card/70 hover:bg-accent/15 inline-flex h-12 items-center justify-center rounded-full border px-4 text-sm"
+        {/* Fixed bottom action bar — thumb zone, keyboard-aware */}
+        <div
+          className="md:backdrop-blur-0 fixed inset-x-0 z-[101] border-t border-white/10 bg-[color-mix(in_oklab,white_6%,transparent)] px-4 py-3 backdrop-blur-md sm:px-5 md:relative md:border-t md:bg-transparent"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + var(--kb, 0px))' }}
+        >
+          <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={back}
+              disabled={step === firstStep || submitting}
+              className="h-12 min-w-[88px] rounded-full border border-white/15 bg-white/[.06] px-5 text-sm hover:bg-white/[.12] disabled:opacity-50"
             >
-              Text instead
-            </a>
+              Back
+            </button>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={back}
-                disabled={step === firstStep || submitting}
-                className="border-border/70 bg-card/70 hover:bg-accent/10 inline-flex h-12 items-center justify-center rounded-full border px-5 text-sm disabled:opacity-50"
+              <a
+                href={`sms:+16193996160?&body=${smsBody}`}
+                className="hidden h-12 items-center justify-center rounded-full border border-white/15 bg-white/[.06] px-4 text-sm hover:bg-white/[.12] sm:inline-flex"
               >
-                Back
-              </button>
+                Text instead
+              </a>
 
               <button
                 type="button"
                 onClick={step === 'review' ? submit : next}
                 disabled={!canNext}
-                className="gbtn specular inline-flex h-12 items-center justify-center rounded-full px-6 text-sm disabled:opacity-60"
+                className="h-12 min-w-[140px] rounded-full bg-white px-6 text-sm font-medium text-black hover:opacity-95 active:opacity-90 disabled:opacity-60"
+                style={{ boxShadow: '0 14px 34px rgba(0,0,0,0.24)' }}
               >
-                {step === 'review' ? (submitting ? 'Sending…' : 'Send request') : 'Next'}
+                {step === 'review' ? (submitting ? 'Sending…' : 'Send inquiry') : 'Next'}
               </button>
             </div>
           </div>
@@ -329,42 +402,66 @@ export default function BookingModal({
   );
 }
 
-/* ---------- Step components ---------- */
+/* ---------------- shared UI ---------------- */
 
-function stepTitle(step: Step, serviceTitle?: string) {
-  switch (step) {
-    case 'service':
-      return 'Choose your service';
-    case 'contact':
-      return 'Your contact';
-    case 'details':
-      return serviceTitle ? `Details — ${serviceTitle}` : 'Event details';
-    case 'addons':
-      return 'Optional add-ons';
-    case 'review':
-      return 'Review & send';
-  }
-}
-
-function Field({
-  label,
-  children,
-  hint,
-  invalid = false,
-}: {
-  label: string;
-  children: React.ReactNode;
-  hint?: string;
-  invalid?: boolean;
-}) {
+function Dots({ count, active }: { count: number; active: number }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-sm">{label}</span>
-      <div className={clsx(invalid && 'ring-destructive/50 rounded-lg ring-1')}>{children}</div>
-      {hint ? <span className="text-foreground/60 text-xs">{hint}</span> : null}
-    </label>
+    <div className="hidden gap-1.5 sm:flex">
+      {Array.from({ length: count }).map((_, i) => (
+        <span
+          key={i}
+          className={clsx(
+            'h-2 w-2 rounded-full',
+            i === active
+              ? 'animate-[pulseDot_1.2s_ease-in-out_infinite] bg-white/90'
+              : 'bg-white/35',
+          )}
+        />
+      ))}
+    </div>
   );
 }
+function Panel({ active, children }: { active: boolean; children: React.ReactNode }) {
+  return (
+    <div
+      className={clsx(active ? 'animate-[fadeInUp_.18s_ease-out] opacity-100' : 'hidden opacity-0')}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FloatField({
+  id,
+  label,
+  hint,
+  invalid = false,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  invalid?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative" data-invalid={invalid || undefined}>
+      <label
+        htmlFor={id}
+        className={clsx(
+          'pointer-events-none absolute top-2 left-3 z-10 origin-[0_0] text-xs text-white/70 transition-all',
+          'peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-2 peer-focus:text-xs',
+        )}
+      >
+        {label}
+      </label>
+      <div className={clsx(invalid && 'rounded-xl ring-1 ring-rose-400/50')}>{children}</div>
+      {hint ? <div className="mt-1 text-xs text-white/70">{hint}</div> : null}
+    </div>
+  );
+}
+
+/* ---------------- steps ---------------- */
 
 function ServiceStep({
   selected,
@@ -383,26 +480,26 @@ function ServiceStep({
   ];
   return (
     <div className="grid gap-2">
-      {OPTIONS.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          onClick={() => onSelect(opt)}
-          className={clsx(
-            'flex items-center justify-between rounded-xl border px-4 py-3 text-left',
-            selected === opt.id
-              ? 'border-primary bg-primary/10'
-              : 'border-border hover:bg-accent/10',
-          )}
-        >
-          <span className="font-medium">{opt.title}</span>
-          {selected === opt.id ? (
-            <span className="text-primary text-xs">Selected</span>
-          ) : (
-            <span className="text-foreground/60 text-xs">Choose</span>
-          )}
-        </button>
-      ))}
+      {OPTIONS.map((opt) => {
+        const on = selected === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onSelect(opt)}
+            className={clsx(
+              'flex items-center justify-between rounded-xl border px-4 py-3 text-left',
+              'border-white/12 bg-white/[.05] hover:bg-white/[.10]',
+              on && 'border-white/30 bg-white/[.12]',
+            )}
+          >
+            <span className="font-medium">{opt.title}</span>
+            <span className={clsx('text-xs', on ? 'text-white' : 'text-white/60')}>
+              {on ? 'Selected' : 'Choose'}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -424,10 +521,11 @@ function ContactStep({
 }) {
   return (
     <div className="grid grid-cols-1 gap-3">
-      <Field label="Name *">
+      <FloatField id="bf-name" label="Name *">
         <input
-          className="crm-input"
-          placeholder="Jane Doe"
+          id="bf-name"
+          className="modern-input peer h-12 w-full rounded-xl border border-white/15 bg-white/[.06] px-3 pt-4 text-sm placeholder-transparent backdrop-blur-sm outline-none"
+          placeholder=" "
           value={name}
           onChange={(e) => onName(e.target.value)}
           autoComplete="name"
@@ -435,33 +533,35 @@ function ContactStep({
           inputMode="text"
           required
         />
-      </Field>
+      </FloatField>
 
-      <Field label="Email">
+      <FloatField id="bf-email" label="Email">
         <input
-          className="crm-input"
-          placeholder="jane@email.com"
+          id="bf-email"
+          className="modern-input peer h-12 w-full rounded-xl border border-white/15 bg-white/[.06] px-3 pt-4 text-sm placeholder-transparent backdrop-blur-sm outline-none"
+          placeholder=" "
           value={email}
           onChange={(e) => onEmail(e.target.value)}
           type="email"
           autoComplete="email"
           inputMode="email"
         />
-      </Field>
+      </FloatField>
 
-      <Field label="Phone">
+      <FloatField id="bf-phone" label="Phone">
         <input
-          className="crm-input"
-          placeholder="(555) 555-5555"
+          id="bf-phone"
+          className="modern-input peer h-12 w-full rounded-xl border border-white/15 bg-white/[.06] px-3 pt-4 text-sm placeholder-transparent backdrop-blur-sm outline-none"
+          placeholder=" "
           value={phoneOrText}
           onChange={(e) => onPhone(e.target.value)}
           type="tel"
           inputMode="tel"
           autoComplete="tel"
         />
-      </Field>
+      </FloatField>
 
-      <p className="text-foreground/60 text-xs">Provide at least one: email or phone.</p>
+      <p className="text-xs text-white/70">Provide at least one: email or phone.</p>
     </div>
   );
 }
@@ -494,60 +594,118 @@ function DetailsStep({
   onNotes: (v: string) => void;
 }) {
   const dateInvalid = !!date && (date < minDate || date > maxDate);
-  const sizeInvalid = partySize !== '' && (partySize < 1 || partySize > 15);
+  const sizeInvalid = partySize !== '' && (partySize < MIN_PARTY || partySize > MAX_PARTY);
+
+  const quickSizes = [1, 3, 5, 10, 15];
 
   return (
     <div className="grid grid-cols-1 gap-3">
-      <Field label="Preferred date" hint={`Allowed: ${minDate} → ${maxDate}`} invalid={dateInvalid}>
+      <FloatField
+        id="bf-date"
+        label="Preferred date"
+        hint={`Allowed: ${minDate} → ${maxDate}`}
+        invalid={dateInvalid}
+      >
         <input
-          className="crm-input"
+          id="bf-date"
+          className="modern-input peer h-12 w-full rounded-xl border border-white/15 bg-white/[.06] px-3 pt-4 text-sm placeholder-transparent backdrop-blur-sm outline-none"
           type="date"
+          placeholder=" "
           value={date}
           onChange={(e) => onDate(e.target.value)}
           autoComplete="off"
           min={minDate}
           max={maxDate}
         />
-      </Field>
+      </FloatField>
 
-      <Field label="Location">
+      <FloatField id="bf-location" label="Location">
         <input
-          className="crm-input"
-          placeholder="Venue / City"
+          id="bf-location"
+          className="modern-input peer h-12 w-full rounded-xl border border-white/15 bg-white/[.06] px-3 pt-4 text-sm placeholder-transparent backdrop-blur-sm outline-none"
+          placeholder=" "
           value={location}
           onChange={(e) => onLocation(e.target.value)}
           autoComplete="address-level2"
           inputMode="text"
         />
-      </Field>
+      </FloatField>
 
-      <Field label="Party size" hint="Up to 15 people." invalid={sizeInvalid}>
-        <input
-          className="crm-input"
-          type="number"
-          min={1}
-          max={15}
-          placeholder="e.g., 6"
-          value={partySize}
-          onChange={(e) => {
-            const raw = e.target.value;
-            if (raw === '') return onPartySize('');
-            onPartySize(clampPartySize(Number(raw)));
-          }}
-          inputMode="numeric"
-        />
-      </Field>
+      <div className="grid gap-2">
+        <FloatField id="bf-size" label="Party size" hint="Up to 15 people." invalid={sizeInvalid}>
+          <div className="flex items-center rounded-xl border border-white/15 bg-white/[.06] p-1">
+            <button
+              type="button"
+              onClick={() =>
+                onPartySize(partySize === '' ? MIN_PARTY : clampPartySize(Number(partySize) - 1))
+              }
+              className="h-10 w-10 rounded-lg bg-white/[.06] hover:bg-white/[.12]"
+              aria-label="Decrease"
+            >
+              –
+            </button>
+            <input
+              id="bf-size"
+              className="modern-input h-10 w-full bg-transparent text-center text-sm outline-none"
+              type="number"
+              min={MIN_PARTY}
+              max={MAX_PARTY}
+              placeholder="—"
+              value={partySize}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '') return onPartySize('');
+                onPartySize(clampPartySize(Number(raw)));
+              }}
+              inputMode="numeric"
+            />
+            <button
+              type="button"
+              onClick={() =>
+                onPartySize(partySize === '' ? MIN_PARTY : clampPartySize(Number(partySize) + 1))
+              }
+              className="h-10 w-10 rounded-lg bg-white/[.06] hover:bg-white/[.12]"
+              aria-label="Increase"
+            >
+              +
+            </button>
+          </div>
+        </FloatField>
 
-      <Field label={serviceTitle ? `Notes for ${serviceTitle}` : 'Notes'}>
+        <div className="flex flex-wrap gap-2">
+          {quickSizes.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onPartySize(n)}
+              className={clsx(
+                'rounded-full border px-3 py-1.5 text-xs transition',
+                partySize === n
+                  ? 'border-white/30 bg-white/[.16] text-white'
+                  : 'border-white/15 bg-white/[.06] text-white/80 hover:bg-white/[.10]',
+              )}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <FloatField id="bf-notes" label={serviceTitle ? `Notes for ${serviceTitle}` : 'Notes'}>
         <textarea
-          className="crm-input min-h-[100px]"
-          placeholder="Share looks, timing, allergies, or anything else"
+          id="bf-notes"
+          className="modern-input min-h-[110px] w-full rounded-xl border border-white/15 bg-white/[.06] px-3 py-3 text-sm placeholder-transparent backdrop-blur-sm outline-none"
+          placeholder=" "
           value={notes}
           onChange={(e) => onNotes(e.target.value)}
         />
-      </Field>
+      </FloatField>
 
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-rose-400" role="alert" aria-live="polite">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -562,7 +720,7 @@ function AddOnsStep({
   toggle: (id: string) => void;
 }) {
   if (!addOns?.length) {
-    return <p className="text-foreground/70 text-sm">No add-ons available for this service.</p>;
+    return <p className="text-sm text-white/70">No add-ons available for this service.</p>;
   }
   return (
     <div>
@@ -575,8 +733,10 @@ function AddOnsStep({
               type="button"
               onClick={() => toggle(a.id)}
               className={clsx(
-                'crm-chip',
-                on ? 'border-primary bg-primary/10' : 'hover:bg-accent/15',
+                'rounded-full border px-3 py-1.5 text-sm transition',
+                on
+                  ? 'border-white/30 bg-white/[.16] text-white'
+                  : 'border-white/15 bg-white/[.06] text-white/80 hover:bg-white/[.10]',
               )}
               aria-pressed={on}
             >
@@ -586,7 +746,7 @@ function AddOnsStep({
           );
         })}
       </div>
-      <p className="text-foreground/60 mt-2 text-xs">
+      <p className="mt-2 text-xs text-white/70">
         You can adjust add-ons later during consultation.
       </p>
     </div>
@@ -597,8 +757,8 @@ function Row({ label, value }: { label: string; value?: string | number | null }
   if (value === undefined || value === null || value === '') return null;
   return (
     <div className="flex items-start justify-between gap-3">
-      <span className="text-foreground/60">{label}</span>
-      <span className="text-foreground/90 font-medium">{String(value)}</span>
+      <span className="text-white/70">{label}</span>
+      <span className="font-medium text-white">{String(value)}</span>
     </div>
   );
 }
@@ -635,12 +795,31 @@ function ReviewStep({
       <Row label="Party size" value={partySize || undefined} />
       {!!addOns.length && <Row label="Add-ons" value={addOns.join(', ')} />}
       <div>
-        <div className="text-foreground/60">Notes</div>
+        <div className="text-white/70">Notes</div>
         <div className="mt-1 whitespace-pre-wrap">{notes || '—'}</div>
       </div>
-      <p className="text-foreground/60 mt-1 text-xs">
+      <p className="mt-1 text-xs text-white/70">
         We’ll confirm availability and follow up with next steps.
       </p>
     </div>
   );
+}
+
+function DotsOrLabel() {
+  return null;
+}
+
+function stepTitle(step: Step, serviceTitle?: string) {
+  switch (step) {
+    case 'service':
+      return 'Choose your service';
+    case 'contact':
+      return 'Your contact';
+    case 'details':
+      return serviceTitle ? `Details — ${serviceTitle}` : 'Event details';
+    case 'addons':
+      return 'Optional add-ons';
+    case 'review':
+      return 'Review & send';
+  }
 }
