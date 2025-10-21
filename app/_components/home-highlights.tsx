@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-5 sm:p-6">
+    <article className="group border-border/60 bg-card/70 relative overflow-hidden rounded-2xl border p-5 sm:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -inset-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -22,19 +22,26 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 export default function HomeHighlights() {
   return (
-    <section id="highlights" className="f-container mt-10">
+    <section
+      id="highlights"
+      className="f-container mt-12 mb-12 sm:mt-14 sm:mb-16 md:mt-16 md:mb-20"
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card title="Luxury, Camera-Ready Skin">
-          Skin prep that photographs beautifully and lasts. Thoughtful product selection for every skin type and tone—refined, never heavy.
+          Skin prep that photographs beautifully and lasts. Thoughtful product selection for every
+          skin type and tone—refined, never heavy.
         </Card>
         <Card title="Bridal & Soft Glam Expertise">
-          From natural bridal to elevated soft glam, looks are tailored to features, lighting, and timeline—calm mornings, flawless results.
+          From natural bridal to elevated soft glam, looks are tailored to features, lighting, and
+          timeline—calm mornings, flawless results.
         </Card>
         <Card title="On-Location & Studio">
-          Available across San Diego, OC, and LA. In-studio appointments or full on-site teams for weddings, events, and photoshoots.
+          Available across San Diego, OC, and LA. In-studio appointments or full on-site teams for
+          weddings, events, and photoshoots.
         </Card>
         <Card title="Timelines & Trials, Done Right">
-          Clear communication, efficient schedules, and optional trials. We handle the details so you can enjoy the day.
+          Clear communication, efficient schedules, and optional trials. We handle the details so
+          you can enjoy the day.
         </Card>
       </div>
     </section>
