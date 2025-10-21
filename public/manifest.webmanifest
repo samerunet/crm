@@ -1,0 +1,11 @@
+{
+  "name": "Fari Makeup",
+  "short_name": "Fari",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#120D0A",
+  "theme_color": "#CBB9A4",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

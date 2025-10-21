@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import ServicesClient from './_components/services-client';
+import SEOJsonLD from '@/components/seo-jsonld';
 
 export const metadata: Metadata = {
   title: 'Makeup Services: Bridal, Editorial & Event – San Diego',
@@ -10,5 +11,10 @@ export const metadata: Metadata = {
 };
 
 export default function ServicesPage() {
-  return <ServicesClient />;
+  return (
+    <>
+      <SEOJsonLD canonical="https://farimakeup.com/services" />
+      <ServicesClient />
+    </>
+  );
 }

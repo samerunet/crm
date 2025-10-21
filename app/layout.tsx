@@ -1,66 +1,83 @@
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
-
-import type { Metadata, Viewport } from 'next';
-import type { ReactNode } from 'react';
+import AppProviders from '@/components/ui/app-providers';
+import Navbar from '@/components/ui/navbar';
+import Footer from '@/components/ui/footer';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
-import SeoJsonLd from '@/components/seo-jsonld';
-import AppProviders from '@/components/ui/app-providers';
-import Footer from '@/components/ui/footer';
-import Navbar from '@/components/ui/navbar';
+const inter = Inter({ subsets: ['latin'] });
+const CANONICAL = new URL('https://farimakeup.com');
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://crm-sable-iota.vercel.app'),
+  metadataBase: CANONICAL,
   title: {
-    default: 'Fari Makeup — Bridal & Luxury Makeup Artist',
+    default: 'Fari Makeup — Bridal & Luxury Soft Glam in San Diego, OC & LA',
     template: '%s | Fari Makeup',
   },
   description:
-    'Bridal & luxury makeup artist in San Diego with on-location services across Orange County, Los Angeles & destination weddings.',
-  robots: { index: true, follow: true, nocache: false },
+    'Bridal makeup and modern soft glam across San Diego, Orange County, and Los Angeles. Luxury skin prep, long-lasting looks, on-location service, and a calm, professional experience.',
   alternates: { canonical: '/' },
+  applicationName: 'Fari Makeup',
+  authors: [{ name: 'Fari Makeup' }],
+  creator: 'Fari Makeup',
+  publisher: 'Fari Makeup',
+  keywords: [
+    'Fari Makeup',
+    'Fariia Makeup',
+    'bridal makeup',
+    'soft glam',
+    'natural makeup',
+    'luxury makeup',
+    'wedding makeup artist',
+    'San Diego',
+    'Orange County',
+    'Los Angeles',
+  ],
   openGraph: {
     type: 'website',
+    url: CANONICAL.toString(),
     siteName: 'Fari Makeup',
-    url: 'https://crm-sable-iota.vercel.app/',
-    title: 'Fari Makeup — Bridal & Luxury Makeup Artist',
+    title: 'Fari Makeup — Bridal & Luxury Soft Glam',
     description:
-      'Soft, camera-ready glam for weddings, editorials, and events across San Diego, OC, LA & destinations.',
-    images: [{ url: '/og/hero.jpg', width: 1200, height: 630, alt: 'Luxury bridal makeup' }],
+      'Timeless bridal looks and soft glam. Serving San Diego, OC, and LA. On-location services, trials, and destination weddings.',
+    images: [
+      {
+        url: '/og.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Fari Makeup — Bridal & Luxury Soft Glam',
+      },
+    ],
+    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    creator: '@fari_makeup',
-    title: 'Fari Makeup — Bridal & Luxury Makeup Artist',
+    title: 'Fari Makeup — Bridal & Luxury Soft Glam',
     description:
-      'Soft, camera-ready glam for weddings, editorials, and events across San Diego, OC, LA & destinations.',
-    images: ['/og/hero.jpg'],
+      'Bridal makeup and soft glam in San Diego, OC & LA. Luxury skin prep, long-lasting looks, on-location service.',
+    images: ['/og.jpg'],
   },
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
   },
-  verification: {
-    google: '-cwOr0RxS8EOx34LSK-TDrtz09nrsEPjC1vn05djVm8',
-  },
+  manifest: '/manifest.webmanifest',
+  category: 'beauty',
 };
 
-export const viewport: Viewport = {
-  themeColor: '#ffffff',
-};
-
-export { reportWebVitals } from '@/lib/vitals';
-
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="fari-light" suppressHydrationWarning>
-      <body>
+    <html lang="en" data-theme="fari-light">
+      <body className={inter.className}>
         <AppProviders>
           <Navbar />
           {children}
           <Footer />
         </AppProviders>
-        <SeoJsonLd />
         <SpeedInsights />
       </body>
     </html>

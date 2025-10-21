@@ -1,14 +1,14 @@
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://crm-sable-iota.vercel.app';
+  const base = 'https://farimakeup.com';
+  const now = new Date().toISOString();
+  const paths = ['', '/services', '/portfolio', '/faq', '/about', '/courses', '/auth/sign-in'];
 
-  return [
-    { url: `${base}/`, changeFrequency: 'weekly', priority: 1.0 },
-    { url: `${base}/services`, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${base}/portfolio`, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/reviews`, changeFrequency: 'monthly', priority: 0.7 },
-    { url: `${base}/faq`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${base}/about`, changeFrequency: 'yearly', priority: 0.5 },
-  ];
+  return paths.map((p) => ({
+    url: `${base}${p}`,
+    lastModified: now,
+    changeFrequency: p === '' ? 'weekly' : 'monthly',
+    priority: p === '' ? 1 : 0.6,
+  }));
 }

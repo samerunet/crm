@@ -287,9 +287,23 @@ function ServiceCard({ service }: { service: Service }) {
           </>
         ) : null}
 
-        {/* sticky bottom hint */}
-        <div className="text-foreground/60 mt-auto pt-5 text-xs tracking-wide uppercase">
-          Send inquiry
+        {/* subtle pill CTA at the very bottom (decorative, card handles click) */}
+        <div aria-hidden className="pointer-events-none mt-auto pt-5">
+          <span className="border-border/60 bg-card/70 text-foreground/80 group-hover:bg-accent/10 group-hover:text-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-[0.18em] uppercase shadow-[inset_0_1px_rgba(255,255,255,.14)] backdrop-blur-sm transition-colors duration-200 select-none">
+            Send inquiry
+            <svg
+              className="h-3.5 w-3.5 opacity-70 transition-transform duration-200 group-hover:translate-x-0.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </span>
         </div>
       </div>
     </article>
