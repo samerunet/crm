@@ -108,7 +108,7 @@ export default function AboutPage() {
           <aside className="glass-2 specular border-border/70 flex flex-col gap-4 rounded-3xl border p-3 sm:p-5">
             <div className="border-border/60 relative aspect-[3/4] overflow-hidden rounded-2xl border">
               <Image
-                src="/images/fariia-portrait.jpg"
+                src="/images/IMG_1381.JPG"
                 alt="Fariia — Bridal & Luxury Makeup Artist"
                 fill
                 priority

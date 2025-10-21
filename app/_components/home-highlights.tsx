@@ -22,7 +22,7 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 export default function HomeHighlights() {
   return (
-    <section className="f-container mt-10">
+    <section id="highlights" className="f-container mt-10">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card title="Luxury, Camera-Ready Skin">
           Skin prep that photographs beautifully and lasts. Thoughtful product selection for every skin type and tone—refined, never heavy.

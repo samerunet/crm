@@ -5,6 +5,7 @@ import AppProviders from '@/components/ui/app-providers';
 import Navbar from '@/components/ui/navbar';
 import Footer from '@/components/ui/footer';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 const CANONICAL = new URL('https://farimakeup.com');
@@ -73,6 +74,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-theme="fari-light">
       <body className={inter.className}>
+        <Script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-54ESDKQQKV"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-54ESDKQQKV');
+          `}
+        </Script>
         <AppProviders>
           <Navbar />
           {children}
