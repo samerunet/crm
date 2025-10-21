@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
     formats: ["image/avif", "image/webp"],
+    qualities: [65, 75],
   },
   onDemandEntries: {
     maxInactiveAge: 60 * 1000,
