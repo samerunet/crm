@@ -26,10 +26,11 @@ export default function AboutPage() {
       <div className="f-container space-y-10">
         <section>
           <BookingBanner
-            align="left"
             glassOpacity={5}
             showCTA={false}
             subline="San Diego • Orange County • Los Angeles • Destination"
+            sublineClassName="text-white"
+            sublineAlign="end"
             className="w-full"
           />
         </section>

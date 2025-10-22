@@ -23,8 +23,8 @@
     "@prisma/extension-accelerate": "^1.0.0",
     "@react-email/render": "^1.4.0",
     "bcryptjs": "^3.0.2",
-    "dotenv": "^16.4.5",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.4.5",
     "framer-motion": "^12.23.22",
     "next": "15.5.4",
     "next-auth": "^4.24.11",
@@ -52,15 +52,16 @@
     "eslint-config-next": "15.5.4",
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-unicorn": "^61.0.2",
+    "png-to-ico": "^3.0.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
     "prisma": "^5.22.0",
+    "sharp": "^0.33.5",
+    "svgo": "^3.3.2",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "vercel": "^48.4.1",
-    "sharp": "^0.33.3",
-    "svgo": "^3.3.2"
+    "vercel": "^48.4.1"
   },
   "engines": {
     "node": "20.x"

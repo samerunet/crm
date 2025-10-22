@@ -1,12 +1,12 @@
 // FILE: components/sections/booking-banner.tsx  (DROP-IN REPLACEMENT)
-"use client";
+'use client';
 
-import clsx from "clsx";
-import { useBooking } from "@/components/ui/booking-provider";
+import clsx from 'clsx';
+import { useBooking } from '@/components/ui/booking-provider';
 
 type Props = {
   /** Left/center/right text alignment (affects CTA alignment too) */
-  align?: "left" | "center" | "right";
+  align?: 'left' | 'center' | 'right';
   /** 0–100: more = more opaque. 6 ≈ 94% transparent */
   glassOpacity?: number;
   /** Show CTA button (uses BookingProvider only when true) */
@@ -15,25 +15,31 @@ type Props = {
   subline?: string;
   /** Headline text (gold) */
   headline?: string;
+  /** Semantic element for the headline (helps SEO/AT) */
+  headlineElement?: keyof JSX.IntrinsicElements;
+  /** Alignment override for the subline badge */
+  sublineAlign?: 'start' | 'center' | 'end';
+  /** Optional class override for the subline span */
+  sublineClassName?: string;
   /** Force everything onto one line (will scale down to fit) */
   oneLine?: boolean;
   className?: string;
 };
 
 /** CTA is isolated so the hook only runs when we actually render it */
-function BannerCTA({ align }: { align: "left" | "center" | "right" }) {
+function BannerCTA({ align }: { align: 'left' | 'center' | 'right' }) {
   const booking = useBooking();
   return (
     <div
       className={clsx(
-        "shrink-0",
-        align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""
+        'shrink-0',
+        align === 'center' ? 'mx-auto' : align === 'right' ? 'ml-auto' : '',
       )}
     >
       <button
         onClick={() => booking.open()}
         type="button"
-        className="inline-flex h-10 items-center rounded-full px-4 gbtn transition-transform hover:scale-[1.02] active:scale-[0.99] specular"
+        className="gbtn specular inline-flex h-10 items-center rounded-full px-4 transition-transform hover:scale-[1.02] active:scale-[0.99]"
       >
         Book now
       </button>
@@ -42,20 +48,42 @@ function BannerCTA({ align }: { align: "left" | "center" | "right" }) {
 }
 
 export default function BookingBanner({
-  align = "left",
+  align = 'left',
   glassOpacity = 6,
   showCTA = false,
-  headline = "LUXURY MAKEUP ARTIST",
-  subline = "San Diego • Orange County • Los Angeles • Destination",
+  headline = 'LUXURY MAKEUP ARTIST',
+  subline = 'San Diego • Orange County • Los Angeles • Destination',
+  headlineElement = 'span',
+  sublineAlign = 'start',
+  sublineClassName,
   oneLine = true,
-  className = "",
+  className = '',
 }: Props) {
   const justify =
-    align === "center"
-      ? "justify-center text-center"
-      : align === "right"
-      ? "justify-end text-right"
-      : "justify-start text-left";
+    align === 'center'
+      ? 'justify-center text-center'
+      : align === 'right'
+        ? 'justify-end text-right'
+        : 'justify-start text-left';
+  const HeadlineTag = headlineElement as keyof JSX.IntrinsicElements;
+  const stackClass =
+    align === 'right'
+      ? 'flex w-full items-center justify-end gap-3'
+      : align === 'center'
+        ? 'flex w-full flex-col items-center text-center gap-2 sm:flex-row sm:items-center sm:justify-center'
+        : 'flex w-full items-center gap-3';
+  const baseBadgeClass =
+    'inline-flex items-center rounded-full border border-white/40 bg-white/[0.18] px-3 py-1 text-sm text-white shadow-[0_10px_28px_rgba(0,0,0,0.25)] backdrop-blur-md';
+  const sublineAlignClass =
+    sublineAlign === 'end'
+      ? align === 'right'
+        ? ''
+        : 'ml-auto sm:self-end text-right'
+      : sublineAlign === 'center'
+        ? 'sm:mx-auto text-center'
+        : align === 'right'
+          ? 'text-right'
+          : 'text-left sm:ml-auto text-white';
 
   return (
     <section
@@ -63,9 +91,9 @@ export default function BookingBanner({
       aria-label="Brand headline"
       className={clsx(
         // Stronger glass bar style (more liquid + crisp edge)
-        "pointer-events-auto rounded-2xl border shadow-[0_24px_70px_rgba(0,0,0,0.26)] specular",
-        "border-border/70 backdrop-blur-[18px]",
-        className
+        'specular pointer-events-auto rounded-2xl border shadow-[0_24px_70px_rgba(0,0,0,0.26)]',
+        'border-border/70 backdrop-blur-[18px]',
+        className,
       )}
       style={{
         background: `color-mix(in oklab, var(--card) ${glassOpacity}%, transparent)`,
@@ -73,42 +101,42 @@ export default function BookingBanner({
     >
       <div
         className={clsx(
-          "px-4 sm:px-5 py-3 sm:py-3.5",
-          "flex items-center gap-3 sm:gap-4",
+          'px-4 py-3 sm:px-5 sm:py-3.5',
+          'flex items-center gap-3 sm:gap-4',
           justify,
-          oneLine ? "whitespace-nowrap overflow-hidden" : ""
+          oneLine && align !== 'right' ? 'overflow-hidden whitespace-nowrap' : '',
         )}
       >
         {/* Headline + subline in one line */}
-        <div className={clsx("min-w-0 flex items-baseline gap-2 sm:gap-3", oneLine && "overflow-hidden")}>
-          <span
+        <div
+          className={clsx(
+            'flex min-w-0',
+            stackClass,
+            oneLine && align !== 'right' && sublineAlign !== 'end' && 'overflow-hidden',
+          )}
+        >
+          <HeadlineTag
             className="heading-gold block shrink-0"
             style={{
-              fontFamily:
-                `'Arizona Display','Arizona','Playfair Display','Cormorant Garamond',Georgia,serif`,
-              fontSize: "clamp(18px, 3.2vw, 28px)",
-              letterSpacing: ".6px",
+              fontFamily: `'Arizona Display','Arizona','Playfair Display','Cormorant Garamond',Georgia,serif`,
+              fontSize: 'clamp(18px, 3.2vw, 28px)',
+              letterSpacing: '.6px',
               lineHeight: 1.04,
             }}
           >
             {headline}
-          </span>
-
-          <span
-            className="hidden sm:inline select-none text-foreground/55"
-            aria-hidden
-          >
-            ·
-          </span>
+          </HeadlineTag>
 
           <span
             className={clsx(
-              "text-foreground/85",
-              oneLine && "truncate"
+              baseBadgeClass,
+              sublineClassName ?? 'text-foreground/90',
+              sublineAlignClass,
+              oneLine && align === 'left' && sublineAlign !== 'end' && 'truncate',
             )}
             style={{
               fontFamily: `'Cormorant Garamond','Times New Roman',ui-serif,Georgia,serif`,
-              fontSize: "clamp(13px, 2.2vw, 16px)",
+              fontSize: 'clamp(13px, 2.2vw, 15px)',
               lineHeight: 1.15,
             }}
             title={subline}
@@ -148,11 +176,13 @@ export default function BookingBanner({
           -webkit-text-fill-color: transparent;
           -webkit-text-stroke: 0.6px rgba(108, 58, 34, 0.5);
           text-shadow:
-            0 1px 0 rgba(255,255,255,.2),
-            0 12px 40px rgba(0,0,0,.22);
+            0 1px 0 rgba(255, 255, 255, 0.2),
+            0 12px 40px rgba(0, 0, 0, 0.22);
         }
         @supports not (-webkit-text-stroke: 1px black) {
-          .heading-gold { color: var(--gold); }
+          .heading-gold {
+            color: var(--gold);
+          }
         }
       `}</style>
     </section>

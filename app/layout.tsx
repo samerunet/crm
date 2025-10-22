@@ -1,3 +1,4 @@
+// app/layout.tsx
 import React from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
@@ -10,7 +11,8 @@ import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 const SITE_URL = new URL('https://farimakeup.com');
-const SITE_TITLE = 'Fari Makeup — Bridal & Luxury Soft Glam in San Diego, OC & LA';
+const SITE_TITLE =
+  'San Diego Makeup * Fari Makeup — Bridal & Luxury Soft Glam in San Diego, OC & LA';
 const SITE_DESCRIPTION =
   'Bridal makeup and modern soft glam across San Diego, Orange County, and Los Angeles. Luxury skin prep, long-lasting looks, on-location service, and a calm, professional experience.';
 
@@ -65,16 +67,20 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: ['/og.jpg'],
   },
+  // Keep your manifest file in /public (ensure it references the 192/512 icons too)
   manifest: '/manifest.webmanifest',
   category: 'beauty',
-};
-
-export const icons = {
-  icon: [
-    { url: '/favicon.ico', sizes: 'any' },
-    { url: '/favicon.svg', type: 'image/svg+xml' },
-  ],
-  apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  // ✅ Favicon / icons for SERP + PWA + Apple
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' }, // Google/desktop fallback
+      { url: '/favicon.svg', type: 'image/svg+xml' }, // Modern browsers
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' }, // Android/PWA
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' }, // Android/PWA
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+    shortcut: ['/favicon.ico'],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

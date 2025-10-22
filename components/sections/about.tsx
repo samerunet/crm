@@ -80,10 +80,11 @@ export default function AboutSection() {
       {/* GOLD HEADLINE BANNER — STANDALONE (separate box, not over image) */}
       <div className="mb-3 sm:mb-4">
         <BookingBanner
-          align="left"
           glassOpacity={5}                 // ~95% transparent
           showCTA={false}                  // keep this strip clean
           subline="San Diego • Orange County • Los Angeles • Destination"
+          sublineClassName="text-white"
+          sublineAlign="end"
           className="w-full"
         />
       </div>
