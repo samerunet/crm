@@ -83,7 +83,7 @@ export default function AboutSection() {
           glassOpacity={5}                 // ~95% transparent
           showCTA={false}                  // keep this strip clean
           subline="San Diego • Orange County • Los Angeles • Destination"
-          sublineClassName="text-white"
+          sublineClassName="text-black"
           sublineAlign="end"
           className="w-full"
         />

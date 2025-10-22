@@ -1,6 +1,8 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  swcMinify: true,
+  outputFileTracingRoot: path.join(__dirname),
   reactStrictMode: true,
   compress: true,
   poweredByHeader: false,

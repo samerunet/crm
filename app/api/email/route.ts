@@ -29,9 +29,8 @@ const IS_PROD = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 
 // In prod we must use a verified sender (your domain). In dev we keep Resend's onboarding.
-const RESEND_FROM = IS_PROD
-  ? process.env.RESEND_FROM || 'Fari Makeup <hello@farimakeup.com>'
-  : process.env.RESEND_FROM || 'Acme <onboarding@resend.dev>';
+const RAW_RESEND_FROM = process.env.RESEND_FROM || 'Fari Makeup <booking@farimakeup.com>';
+const RESEND_FROM = RAW_RESEND_FROM.trim().replace(/^['"]|['"]$/g, '');
 
 // In prod, lock delivery to this inbox. In dev we still default to delivered@resend.dev.
 const SITE_CONTACT_TO =

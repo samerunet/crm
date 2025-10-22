@@ -1,7 +1,14 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type TouchEvent,
+} from 'react';
 
 const PHOTOS: { src: string; alt: string }[] = [
   { src: '/portfolio/IMG_7267.JPG', alt: 'San Diego bridal makeup — soft glam (IMG_7267)' },
@@ -42,17 +49,40 @@ export default function PortfolioClient() {
     return () => document.removeEventListener('keydown', onKey);
   }, [idx, close, next, prev]);
 
-  const touchStartX = useRef<number | null>(null);
+  const dragOriginX = useRef<number | null>(null);
+  const pointerId = useRef<number | null>(null);
+
+  const startSwipe = useCallback((x: number, id?: number) => {
+    dragOriginX.current = x;
+    if (typeof id === 'number') pointerId.current = id;
+  }, []);
+
+  const endSwipe = useCallback(
+    (x: number) => {
+      if (dragOriginX.current == null) return;
+      const dx = x - dragOriginX.current;
+      dragOriginX.current = null;
+      pointerId.current = null;
+      const THRESHOLD = 40;
+      if (dx > THRESHOLD) prev();
+      if (dx < -THRESHOLD) next();
+    },
+    [next, prev],
+  );
+
   const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
-    touchStartX.current = e.changedTouches[0].clientX;
+    startSwipe(e.changedTouches[0].clientX);
   };
   const onTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
-    if (touchStartX.current == null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    const THRESHOLD = 40;
-    if (dx > THRESHOLD) prev();
-    if (dx < -THRESHOLD) next();
+    endSwipe(e.changedTouches[0].clientX);
+  };
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') return;
+    startSwipe(e.clientX, e.pointerId);
+  };
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (pointerId.current !== null && e.pointerId !== pointerId.current) return;
+    endSwipe(e.clientX);
   };
 
   return (
@@ -88,7 +118,6 @@ export default function PortfolioClient() {
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
                   className="object-cover transition-transform group-hover:scale-[1.03]"
                   priority={i === 0}
-                  quality={85}
                 />
               </div>
             </button>
@@ -109,9 +138,11 @@ export default function PortfolioClient() {
           />
 
           <div
-            className="glass specular relative z-10 h-[70vh] w-[70vw] rounded-2xl p-2 md:h-[80vh] md:w-[min(70vw,1100px)]"
+            className="glass specular relative z-10 h-[70vh] w-full max-w-[90vw] rounded-2xl p-2 md:h-[80vh] md:w-[min(70vw,1100px)]"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
+            onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
           >
             <button
               onClick={close}
@@ -144,7 +175,6 @@ export default function PortfolioClient() {
                 fill
                 sizes="(max-width: 1024px) 90vw, 70vw"
                 className="object-contain"
-                quality={100}
               />
             </div>
           </div>

@@ -68,22 +68,22 @@ export default function BookingBanner({
   const HeadlineTag = headlineElement as keyof JSX.IntrinsicElements;
   const stackClass =
     align === 'right'
-      ? 'flex w-full items-center justify-end gap-3'
+      ? 'flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3'
       : align === 'center'
-        ? 'flex w-full flex-col items-center text-center gap-2 sm:flex-row sm:items-center sm:justify-center'
-        : 'flex w-full items-center gap-3';
+        ? 'flex w-full flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:justify-center sm:gap-3'
+        : 'flex w-full flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3';
   const baseBadgeClass =
-    'inline-flex items-center rounded-full border border-white/40 bg-white/[0.18] px-3 py-1 text-sm text-white shadow-[0_10px_28px_rgba(0,0,0,0.25)] backdrop-blur-md';
+    'inline-flex items-center rounded-full border border-white/40 bg-white/[0.22] px-3 py-1 text-sm text-black shadow-[0_10px_28px_rgba(0,0,0,0.18)] backdrop-blur-md';
   const sublineAlignClass =
     sublineAlign === 'end'
       ? align === 'right'
         ? ''
-        : 'ml-auto sm:self-end text-right'
+        : 'ml-auto text-left sm:self-end sm:text-right'
       : sublineAlign === 'center'
         ? 'sm:mx-auto text-center'
         : align === 'right'
           ? 'text-right'
-          : 'text-left sm:ml-auto text-white';
+          : 'text-left sm:ml-auto';
 
   return (
     <section

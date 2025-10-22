@@ -12,7 +12,7 @@
     "start": "next start -p ${PORT:-3000}",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm run lint && pnpm run typecheck",
+    "check": "npm run lint && npm run typecheck",
     "prisma:studio": "prisma studio",
     "seed:users": "node scripts/seed-users.js",
     "img:opt": "node scripts/optimize-images.mjs"
