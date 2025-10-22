@@ -4,6 +4,7 @@ import sharp from 'sharp';
 
 const SRC_DIR = path.resolve('public/portfolio');
 const TARGET_LONG_EDGE = 1200;
+const TARGET_WIDTH_CARDS = 512;
 const QUALITY = 62;
 
 async function optimize() {
@@ -33,9 +34,25 @@ async function optimize() {
       const width = meta.width ?? 0;
       const height = meta.height ?? 0;
       const longEdge = Math.max(width, height);
+      const shortEdge = Math.min(width, height);
 
       const resizeOptions = {};
-      if (longEdge > TARGET_LONG_EDGE) {
+      const longEdgeTarget = width >= height ? TARGET_LONG_EDGE : TARGET_WIDTH_CARDS;
+      const shortEdgeTarget = width < height ? TARGET_LONG_EDGE : TARGET_WIDTH_CARDS;
+
+      if (height >= width) {
+        // portrait image -> clamp width
+        if (width > TARGET_WIDTH_CARDS) {
+          resizeOptions.width = TARGET_WIDTH_CARDS;
+        }
+      } else {
+        // landscape -> clamp height
+        if (height > TARGET_WIDTH_CARDS) {
+          resizeOptions.height = TARGET_WIDTH_CARDS;
+        }
+      }
+
+      if (!Object.keys(resizeOptions).length && longEdge > TARGET_LONG_EDGE) {
         if (width >= height) {
           resizeOptions.width = TARGET_LONG_EDGE;
         } else {

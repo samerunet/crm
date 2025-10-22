@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useBooking } from '@/components/ui/booking-provider';
@@ -21,6 +21,7 @@ function MobileDrawer({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const labelId = useId();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -49,6 +50,7 @@ function MobileDrawer({
       <aside
         role="dialog"
         aria-modal="true"
+        aria-labelledby={labelId}
         style={{
           position: 'fixed',
           top: 0,
@@ -75,7 +77,9 @@ function MobileDrawer({
             padding: '1rem', borderBottom: '1px solid var(--border)',
           }}
         >
-          <div style={{ fontWeight: 600 }}>Menu</div>
+          <h2 id={labelId} style={{ fontWeight: 600, margin: 0, fontSize: '1rem' }}>
+            Menu
+          </h2>
           <button
             onClick={onClose}
             aria-label="Close menu"

@@ -1,0 +1,8 @@
+# Production bundle targets modern evergreen browsers; no legacy polyfills needed
+[production]
+last 2 Chrome version
+last 2 Firefox version
+last 2 Safari version
+
+[development]
+last 1 Chrome version
