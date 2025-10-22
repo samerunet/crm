@@ -49,6 +49,7 @@ export default function BookingModal({
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
   const [partySize, setPartySize] = useState<number>(1);
+  const [eventTime, setEventTime] = useState('');
   const [notes, setNotes] = useState('');
   const [selAddOns, setSelAddOns] = useState<string[]>([]);
 
@@ -136,6 +137,9 @@ export default function BookingModal({
       if (!(partySize >= 1 && partySize <= 15)) {
         errs.partySize = 'Party size must be between 1 and 15.';
       }
+      if (!eventTime.trim()) {
+        errs.time = 'Please share the event time.';
+      }
     }
     if (currentStep === 2) {
       // YOU asked: require a message (keep "Notes" label unchanged)
@@ -146,7 +150,7 @@ export default function BookingModal({
 
   const errors = useMemo(
     () => validateStep(step),
-    [step, name, serviceSelect, otherService, date, partySize, notes],
+    [step, name, serviceSelect, otherService, date, eventTime, partySize, notes],
   );
 
   function goNext() {
@@ -162,7 +166,7 @@ export default function BookingModal({
               : errs.otherService
                 ? 'field-otherService'
                 : '')) ||
-        (step === 1 && (errs.date ? 'field-date' : errs.partySize ? 'field-party' : '')) ||
+        (step === 1 && (errs.date ? 'field-date' : errs.time ? 'field-time' : errs.partySize ? 'field-party' : '')) ||
         (step === 2 && (errs.notes ? 'field-notes' : '')) ||
         '';
       if (id) document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -190,11 +194,12 @@ export default function BookingModal({
       date ? `Date: ${date}` : '',
       location ? `Location: ${location}` : '',
       partySize ? `Party Size: ${partySize}` : '',
+      eventTime ? `Time: ${eventTime}` : '',
       selAddOns.length ? `Add-ons: ${selAddOns.join(', ')}` : '',
       notes ? `Notes: ${notes}` : '',
     ].filter(Boolean);
     return encodeURIComponent(lines.join('\n'));
-  }, [name, email, phone, chosenServiceTitle, date, location, partySize, selAddOns, notes]);
+  }, [name, email, phone, chosenServiceTitle, date, location, partySize, eventTime, selAddOns, notes]);
 
   async function submit() {
     // final guard (incl. message/notes)
@@ -202,7 +207,7 @@ export default function BookingModal({
     if (Object.keys(allErrs).length) {
       // send the user back to first invalid step
       if (allErrs.name || allErrs.service || allErrs.otherService) setStep(0);
-      else if (allErrs.date || allErrs.partySize) setStep(1);
+      else if (allErrs.date || allErrs.time || allErrs.partySize) setStep(1);
       else if (allErrs.notes) setStep(2);
       return;
     }
@@ -219,6 +224,7 @@ export default function BookingModal({
           service: chosenServiceTitle || undefined,
           date: date || undefined,
           location: location.trim() || undefined,
+          time: eventTime.trim() || undefined,
           partySize,
           addOns: selAddOns,
           notes: notes.trim() || undefined, // keep for your records
@@ -387,18 +393,32 @@ export default function BookingModal({
           {/* Step 1: Event */}
           {step === 1 && (
             <section className="grid grid-cols-1 gap-4">
-              <FloatingInput
-                id="field-date"
-                label="Preferred date"
-                value={date}
-                onChange={setDate}
-                type="date"
-                name="event-date"
-                min={todayISO}
-                max={maxDateISO}
-                enterKeyHint="next"
-                error={errors.date}
-              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FloatingInput
+                  id="field-date"
+                  label="Preferred date"
+                  value={date}
+                  onChange={setDate}
+                  type="date"
+                  name="event-date"
+                  min={todayISO}
+                  max={maxDateISO}
+                  enterKeyHint="next"
+                  error={errors.date}
+                />
+                <FloatingInput
+                  id="field-time"
+                  label="Time of the event"
+                  value={eventTime}
+                  onChange={setEventTime}
+                  type="time"
+                  name="event-time"
+                  autoComplete="on"
+                  enterKeyHint="next"
+                  required
+                  error={errors.time}
+                />
+              </div>
 
               {/* Party size */}
               <div

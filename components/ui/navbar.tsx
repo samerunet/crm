@@ -48,8 +48,7 @@ function MobileDrawer({
         }}
       />
       <aside
-        role="dialog"
-        aria-modal="true"
+        role="menu"
         aria-labelledby={labelId}
         style={{
           position: 'fixed',

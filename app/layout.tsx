@@ -86,13 +86,23 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="fari-light">
+      <head>
+        <link
+          rel="preload"
+          as="image"
+          href="/portfolio/12.JPG"
+          // mobile first sizing hint keeps preload effective on all breakpoints
+          imageSizes="100vw"
+          fetchPriority="high"
+        />
+      </head>
       <body className={inter.className}>
         <Script
           async
           src="https://www.googletagmanager.com/gtag/js?id=G-54ESDKQQKV"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="gtag-init" strategy="afterInteractive">
+        <Script id="gtag-init" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
