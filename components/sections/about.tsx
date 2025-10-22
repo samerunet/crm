@@ -13,6 +13,9 @@ const CATEGORIES = [
   { label: "Studio Appointment", img: "/portfolio/IMG_1866.JPG" },
 ];
 
+const HERO_BLUR =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMScgaGVpZ2h0PScxJyBmaWxsPSdub25lJyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPScxJyBoZWlnaHQ9JzEnIGZpbGw9IiNDQkI5QTQiLz48L3N2Zz4=";
+
 const CATEGORY_DETAILS: Record<
   string,
   { intro: string; bullets: string[] }
@@ -100,7 +103,9 @@ export default function AboutSection() {
             priority
             fetchPriority="high"
             quality={65}
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 50vw"
+            placeholder="blur"
+            blurDataURL={HERO_BLUR}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 1200px"
             className="object-cover"
             style={{ objectPosition: "50% 35%" }}
           />
@@ -148,8 +153,7 @@ export default function AboutSection() {
                   alt={c.label}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                  sizes="(max-width: 640px) 45vw, (max-width: 1024px) 25vw, 240px"
-                  quality={65}
+                  sizes="(max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 33vw"
                 />
               </div>
               <div className="mt-2 rounded-lg bg-card/85 px-3 py-2 text-center text-[13px] font-medium backdrop-blur">

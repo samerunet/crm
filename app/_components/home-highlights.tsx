@@ -27,21 +27,17 @@ export default function HomeHighlights() {
       className="f-container mt-12 mb-12 sm:mt-14 sm:mb-16 md:mt-16 md:mb-20"
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card title="Luxury, Camera-Ready Skin">
-          Skin prep that photographs beautifully and lasts. Thoughtful product selection for every
-          skin type and tone—refined, never heavy.
+        <Card title="Camera-ready skin">
+          Long-wear, comfort-first glam tailored to your skin, tone, and signature style.
         </Card>
-        <Card title="Bridal & Soft Glam Expertise">
-          From natural bridal to elevated soft glam, looks are tailored to features, lighting, and
-          timeline—calm mornings, flawless results.
+        <Card title="On-location or studio">
+          Mobile artistry for weddings, events, and shoots across San Diego, Orange County, and Los Angeles.
         </Card>
-        <Card title="On-Location & Studio">
-          Available across San Diego, OC, and LA. In-studio appointments or full on-site teams for
-          weddings, events, and photoshoots.
+        <Card title="Calm, timed mornings">
+          Bridal timelines that stay on schedule without rush—coordinated with your planner and photographer.
         </Card>
-        <Card title="Timelines & Trials, Done Right">
-          Clear communication, efficient schedules, and optional trials. We handle the details so
-          you can enjoy the day.
+        <Card title="Inclusive artistry">
+          Expertise across every skin tone, eye shape, and maternity skin for looks that feel like you.
         </Card>
       </div>
     </section>

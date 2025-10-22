@@ -81,15 +81,14 @@ export default function HeroLanding() {
                   onClick={() => setLightboxIdx(i)}
                 >
                   <div className="relative aspect-square">
-                    <Image
-                      src={img.src}
-                      alt={img.alt}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover transition-transform group-hover:scale-[1.03]"
-                      priority={i < 4}
-                      quality={85}
-                    />
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  className="object-cover transition-transform group-hover:scale-[1.03]"
+                  priority={i === 0}
+                />
                   </div>
                 </button>
               ))}
@@ -135,8 +134,6 @@ export default function HeroLanding() {
                 fill
                 className="object-contain"
                 sizes="70vw"
-                priority
-                quality={90}
               />
             </div>
           </div>
