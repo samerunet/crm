@@ -114,7 +114,9 @@ export default function BookingModal({
   const progress = ((step + 1) / steps.length) * 100;
 
   // ===== validation =====
-  type Errors = Partial<Record<'name' | 'service' | 'otherService' | 'date' | 'partySize', string>>;
+  type Errors = Partial<
+    Record<'name' | 'service' | 'otherService' | 'date' | 'partySize' | 'notes', string>
+  >;
 
   function validateStep(currentStep = step): Errors {
     const errs: Errors = {};
@@ -135,22 +137,33 @@ export default function BookingModal({
         errs.partySize = 'Party size must be between 1 and 15.';
       }
     }
+    if (currentStep === 2) {
+      // YOU asked: require a message (keep "Notes" label unchanged)
+      if (!notes.trim()) errs.notes = 'Please add a brief message.';
+    }
     return errs;
   }
 
   const errors = useMemo(
     () => validateStep(step),
-    [step, name, serviceSelect, otherService, date, partySize],
+    [step, name, serviceSelect, otherService, date, partySize, notes],
   );
 
   function goNext() {
     const errs = validateStep(step);
     if (Object.keys(errs).length) {
-      // scroll to first error
+      // scroll to first error in current step
       const id =
         (step === 0 &&
-          (errs.name ? 'field-name' : errs.service ? 'field-service' : 'field-otherService')) ||
-        (step === 1 && (errs.date ? 'field-date' : 'field-party')) ||
+          (errs.name
+            ? 'field-name'
+            : errs.service
+              ? 'field-service'
+              : errs.otherService
+                ? 'field-otherService'
+                : '')) ||
+        (step === 1 && (errs.date ? 'field-date' : errs.partySize ? 'field-party' : '')) ||
+        (step === 2 && (errs.notes ? 'field-notes' : '')) ||
         '';
       if (id) document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
@@ -184,10 +197,13 @@ export default function BookingModal({
   }, [name, email, phone, chosenServiceTitle, date, location, partySize, selAddOns, notes]);
 
   async function submit() {
-    // final guard
-    const allErrs = { ...validateStep(0), ...validateStep(1) };
+    // final guard (incl. message/notes)
+    const allErrs = { ...validateStep(0), ...validateStep(1), ...validateStep(2) };
     if (Object.keys(allErrs).length) {
-      setStep(0);
+      // send the user back to first invalid step
+      if (allErrs.name || allErrs.service || allErrs.otherService) setStep(0);
+      else if (allErrs.date || allErrs.partySize) setStep(1);
+      else if (allErrs.notes) setStep(2);
       return;
     }
     setSubmitting(true);
@@ -205,7 +221,8 @@ export default function BookingModal({
           location: location.trim() || undefined,
           partySize,
           addOns: selAddOns,
-          notes: notes.trim() || undefined,
+          notes: notes.trim() || undefined, // keep for your records
+          message: notes.trim() || undefined, // map to `message` for server validation
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -506,6 +523,7 @@ export default function BookingModal({
               </div>
 
               <FloatingTextArea
+                id="field-notes"
                 label="Notes"
                 value={notes}
                 onChange={setNotes}
@@ -513,6 +531,8 @@ export default function BookingModal({
                 autoComplete="on"
                 enterKeyHint="done"
                 rows={4}
+                required
+                error={errors.notes}
               />
             </section>
           )}
@@ -554,9 +574,10 @@ export default function BookingModal({
             </button>
 
             <div className="flex items-center gap-2">
+              {/* Make visible on mobile too (was hidden) */}
               <a
                 href={`sms:+16193996160?&body=${smsBody}`}
-                className="hidden h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm text-white/90 hover:bg-white/10 sm:inline-flex"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm text-white/90 hover:bg-white/10"
               >
                 Text instead
               </a>
@@ -714,6 +735,7 @@ function FloatingInput({
 }
 
 function FloatingTextArea({
+  id,
   label,
   value,
   onChange,
@@ -721,7 +743,10 @@ function FloatingTextArea({
   rows = 4,
   autoComplete,
   enterKeyHint,
+  required,
+  error,
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -729,13 +754,20 @@ function FloatingTextArea({
   rows?: number;
   autoComplete?: string;
   enterKeyHint?: 'next' | 'done';
+  required?: boolean;
+  error?: string;
 }) {
+  const describedBy = error ? `${id}-error` : undefined;
   return (
     <div className="group relative">
       <textarea
+        id={id}
+        aria-invalid={!!error}
+        aria-describedby={describedBy}
         className={clsx(
           'peer w-full rounded-xl border px-3 pt-[20px] text-white/95 transition outline-none',
           'border-white/15 bg-white/[0.06] placeholder-transparent focus:border-white/30 focus:bg-white/[0.1]',
+          error && 'border-red-400/60 focus:border-red-400/80',
         )}
         placeholder=" "
         rows={rows}
@@ -743,6 +775,7 @@ function FloatingTextArea({
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
         enterKeyHint={enterKeyHint}
+        required={required}
       />
       <label
         className={clsx(
@@ -754,6 +787,11 @@ function FloatingTextArea({
         {label}
       </label>
       {placeholder ? <div className="mt-1 pl-1 text-xs text-white/50">{placeholder}</div> : null}
+      {error ? (
+        <p id={describedBy} className="mt-1 pl-1 text-[11px] text-red-300">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -805,7 +843,6 @@ function FloatingSelect({
         className={clsx(
           'pointer-events-none absolute top-1.5 left-3 text-[11px] tracking-wide text-white/70 transition-all',
           'peer-focus:top-1.5 peer-focus:text-[11px] peer-focus:text-white/80',
-          // mimic floating for select: keep small label when a value exists
           value ? 'top-1.5 text-[11px] text-white/80' : 'top-3 text-sm text-white/60',
         )}
       >
