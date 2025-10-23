@@ -46,7 +46,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="mt-10 text-center text-xs text-black/75">
+      <div className="mt-10 text-center text-xs text-black/90">
         © {new Date().getFullYear()} Fari Makeup. All rights reserved.
       </div>
     </footer>
