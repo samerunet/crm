@@ -39,7 +39,6 @@ export default function SEOJsonLD({ canonical = 'https://farimakeup.com' }: { ca
     ],
     description:
       'Bridal makeup and modern soft glam across San Diego, Orange County, and Los Angeles. Luxury skin prep, long-lasting looks, on-location service, and a calm, professional experience.',
-    availableChannel: { '@type': 'ServiceChannel', serviceUrl: `${canonical}/services` },
     offers: [
       {
         '@type': 'Offer',
