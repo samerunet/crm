@@ -1,7 +1,7 @@
 // FILE: components/admin/AdminDashboard.tsx  (DROP-IN REPLACEMENT)
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import CalendarIOS from "./CalendarIOS";
 import LeadList from "./LeadList";
 import NewLeadModal from "./NewLeadModal";
@@ -80,13 +80,61 @@ const DEMO_SALES: Sale[] = [
   { id: "s1", amount: 59, type: "guide", createdAt: new Date(nowMs).toISOString() },
 ];
 
+type DbLead = {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  eventDate: Date | string | null;
+  message: string | null;
+  source: string | null;
+  createdAt: Date | string;
+};
+
+const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
+  const eventDateIso =
+    row.eventDate instanceof Date
+      ? row.eventDate.toISOString()
+      : row.eventDate
+      ? new Date(row.eventDate).toISOString()
+      : undefined;
+
+  const emailPlaceholder = "no-email@placeholder.invalid";
+
+  return {
+    id: row.id,
+    name: row.name || "New inquiry",
+    email: row.email && row.email !== emailPlaceholder ? row.email : undefined,
+    phone: row.phone || undefined,
+    stage: "uncontacted",
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    dateOfService: eventDateIso,
+    tags: row.source ? [row.source] : [],
+    notes: row.message
+      ? [
+          {
+            id: `msg-${row.id}`,
+            text: row.message,
+            at:
+              row.createdAt instanceof Date
+                ? row.createdAt.toISOString()
+                : (row.createdAt as string),
+          },
+        ]
+      : [],
+    source: row.source ?? undefined,
+  } as Lead & Record<string, any>;
+};
+
 type ViewMode = "calendar" | "leads" | "contracts" | "invoices" | "content";
 type SortMode = "alpha" | "bookingType" | "contacted" | "completed" | "upcoming" | "repeat";
 
 export default function AdminDashboard() {
-  const [leads, setLeads] = useState<Lead[]>(DEMO_LEADS);
-  const [events, setEvents] = useState<Appointment[]>(DEMO_EVENTS);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [events] = useState<Appointment[]>(DEMO_EVENTS);
   const [sales]  = useState<Sale[]>(DEMO_SALES);
+  const [isLoading, setIsLoading] = useState(true);
+  const [latestFetchError, setLatestFetchError] = useState<string | null>(null);
 
   const [view, setView] = useState<ViewMode>("calendar");
   const [search, setSearch] = useState("");
@@ -106,8 +154,63 @@ export default function AdminDashboard() {
   const closeLead = () => setLeadOpen(false);
 
   // Create & update helpers
+  const loadLeads = useCallback(async () => {
+    setIsLoading(true);
+    setLatestFetchError(null);
+    try {
+      const res = await fetch("/api/leads", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json?.ok && Array.isArray(json.leads)) {
+        setLeads(json.leads.map(mapDbLead));
+      } else {
+        throw new Error(json?.error || "Unexpected response");
+      }
+    } catch (err) {
+      console.error("Failed to load leads", err);
+      setLeads(DEMO_LEADS);
+      setLatestFetchError("Live leads unavailable — showing demo data.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadLeads();
+  }, [loadLeads]);
+
   const handleDayCreate = (date: Date) => { setNewDate(date); setNewOpen(true); };
-  const handleCreateLead = (lead: Lead) => { setLeads(prev => [lead, ...prev]); setNewOpen(false); };
+  const handleCreateLead = async (lead: Lead) => {
+    try {
+      const payload = {
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        eventDate: lead.dateOfService,
+        message: Array.isArray((lead as any).notes) && (lead as any).notes[0]?.text
+          ? (lead as any).notes[0].text
+          : undefined,
+        source: "admin-dashboard",
+      };
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json?.ok && json.lead) {
+        setLeads(prev => [mapDbLead(json.lead), ...prev]);
+      } else {
+        throw new Error(json?.error || "Unable to save lead");
+      }
+    } catch (err) {
+      console.error("Lead save failed, keeping local copy", err);
+      setLeads(prev => [lead, ...prev]);
+    } finally {
+      setNewOpen(false);
+    }
+  };
   const handleUpdateLead = (patch: Lead) => {
     setLeads(prev => prev.map(l => (l.id === patch.id ? { ...l, ...patch } : l)));
     setActiveLead(patch);
@@ -250,6 +353,13 @@ export default function AdminDashboard() {
                   <option value="upcoming">Sort: Upcoming</option>
                   <option value="repeat">Sort: Repeat customers</option>
                 </select>
+                <button
+                  onClick={() => void loadLeads()}
+                  className="h-9 rounded-xl border border-border/60 px-3 text-sm hover:bg-accent/15"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Refreshing…" : "Refresh"}
+                </button>
               </div>
             )}
 
@@ -277,9 +387,20 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {latestFetchError && (
+            <div className="wglass panel text-sm text-amber-200 border border-amber-300/40 bg-amber-500/10">
+              {latestFetchError}
+            </div>
+          )}
+
           {view === "leads" && (
             <div className="wglass panel-lg">
               <LeadList leads={visibleLeads} onOpen={openLead} />
+              {isLoading && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Loading latest leads…
+                </p>
+              )}
             </div>
           )}
 
