@@ -91,25 +91,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="preload"
           as="image"
           href="/portfolio/12.JPG"
-          // mobile first sizing hint keeps preload effective on all breakpoints
           imageSizes="100vw"
           fetchPriority="high"
         />
+        <Script id="gtm-base" strategy="beforeInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','GTM-P7CW6ZTN');`}
+        </Script>
       </head>
       <body className={inter.className}>
-        <Script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-54ESDKQQKV"
-          strategy="lazyOnload"
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html: '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-P7CW6ZTN" height="0" width="0" style="display:none;visibility:hidden"></iframe>',
+          }}
         />
-        <Script id="gtag-init" strategy="lazyOnload">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-54ESDKQQKV');
-          `}
-        </Script>
         <AppProviders>
           <Navbar />
           {children}
