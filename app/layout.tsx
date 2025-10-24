@@ -1,6 +1,6 @@
 // app/layout.tsx
 import React from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import AppProviders from '@/components/ui/app-providers';
@@ -11,17 +11,38 @@ import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 const SITE_URL = new URL('https://farimakeup.com');
-const SITE_TITLE =
-  'San Diego Makeup * Fari Makeup — Bridal & Luxury Soft Glam in San Diego, OC & LA';
+const SITE_TITLE = 'Fari Makeup — Bridal & Luxury Soft Glam in San Diego, OC & LA';
 const SITE_DESCRIPTION =
-  'Bridal makeup and modern soft glam across San Diego, Orange County, and Los Angeles. Luxury skin prep, long-lasting looks, on-location service, and a calm, professional experience.';
+  'Luxury bridal and special event makeup artistry serving San Diego, Orange County, and Los Angeles with signature soft glam, perfected skin prep, and on-location service.';
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Fari Makeup',
+  alternateName: 'Fari Makeup — Bridal & Luxury Soft Glam',
+  url: 'https://farimakeup.com/',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: 'https://farimakeup.com/?s={search_term_string}',
+    'query-input': 'required name=search_term_string',
+  },
+};
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Fari Makeup',
+  url: 'https://farimakeup.com/',
+  logo: 'https://farimakeup.com/logo.png',
+  sameAs: [
+    'https://www.instagram.com/fari_makeup',
+    'https://www.pinterest.com/farimakeup',
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: SITE_URL,
-  title: {
-    default: SITE_TITLE,
-    template: '%s | Fari Makeup',
-  },
+  title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   alternates: {
     canonical: 'https://farimakeup.com',
@@ -67,26 +88,27 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: ['/og.jpg'],
   },
-  // Keep your manifest file in /public (ensure it references the 192/512 icons too)
-  manifest: '/manifest.webmanifest',
+  manifest: '/site.webmanifest',
   category: 'beauty',
-  // ✅ Favicon / icons for SERP + PWA + Apple
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' }, // Google/desktop fallback
-      { url: '/favicon.svg', type: 'image/svg+xml' }, // Modern browsers
-      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' }, // Android/PWA
-      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' }, // Android/PWA
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
     shortcut: ['/favicon.ico'],
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: '#000000',
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="fari-light">
       <head>
+        <meta property="og:site_name" content="Fari Makeup" />
         <link
           rel="preload"
           as="image"
@@ -100,6 +122,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-P7CW6ZTN');`}
+        </Script>
+        <Script id="ld-json-website" type="application/ld+json" strategy="beforeInteractive">
+          {JSON.stringify(websiteSchema)}
+        </Script>
+        <Script id="ld-json-organization" type="application/ld+json" strategy="beforeInteractive">
+          {JSON.stringify(organizationSchema)}
         </Script>
       </head>
       <body className={inter.className}>

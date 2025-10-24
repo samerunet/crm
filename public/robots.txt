@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Icons and manifest must remain accessible
+Allow: /favicon.ico
+Allow: /favicon.svg
+Allow: /apple-touch-icon.png
+Allow: /site.webmanifest
+
+Sitemap: https://farimakeup.com/sitemap.xml
