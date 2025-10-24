@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import '@/styles/admin-surfaces.css';
+
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
