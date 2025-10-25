@@ -1,7 +1,8 @@
 // FILE: components/admin/CalendarIOS.tsx  (DROP-IN REPLACEMENT)
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { Appointment, Lead } from "./types";
 
 /** Safely pull a Date from many possible event fields */
@@ -52,6 +53,80 @@ function monthLabel(d: Date) {
   return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
 
+type StatusCategory = "new" | "pending" | "booked" | "other";
+
+const CATEGORY_COLORS: Record<StatusCategory, string> = {
+  new: "#ef4444",
+  pending: "#f59e0b",
+  booked: "#22c55e",
+  other: "#64748b",
+};
+
+function hexToRgba(hex: string, alpha: number) {
+  const clean = hex.replace("#", "");
+  const bigint = parseInt(clean.length === 3 ? clean.repeat(2) : clean, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function categorizeEvent(lead?: Lead, event?: Appointment): StatusCategory {
+  const stage = lead?.stage;
+  if (stage === "uncontacted") return "new";
+  if (stage === "contacted" || stage === "deposit" || stage === "trial" || stage === "changes")
+    return "pending";
+  if (stage === "booked" || stage === "confirmed" || stage === "completed") return "booked";
+
+  const status = event?.status;
+  if (status === "tentative") return "pending";
+  if (status === "booked" || status === "completed") return "booked";
+  if (status === "canceled") return "other";
+  return "other";
+}
+
+type RichEvent = {
+  event: Appointment;
+  start: Date | null;
+  end: Date | null;
+  lead?: Lead;
+  category: StatusCategory;
+  color: string;
+};
+
+type DaySlot =
+  | { type: "event"; start: Date; end: Date; rich: RichEvent }
+  | { type: "open"; start: Date; end: Date };
+
+function buildDaySchedule(events: RichEvent[], day: Date): DaySlot[] {
+  const sorted = events
+    .filter((rich) => rich.start)
+    .sort((a, b) => (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0));
+  const slots: DaySlot[] = [];
+  const dayStart = new Date(day);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(day);
+  dayEnd.setHours(23, 59, 0, 0);
+
+  let cursor = dayStart;
+
+  for (const rich of sorted) {
+    const start = rich.start ?? new Date(dayStart);
+    const end = rich.end ?? new Date(start.getTime() + 60 * 60 * 1000);
+    if (start > cursor) {
+      slots.push({ type: "open", start: new Date(cursor), end: new Date(start) });
+    }
+    slots.push({ type: "event", start: new Date(start), end: new Date(end), rich });
+    if (end > cursor) cursor = new Date(end);
+  }
+
+  if (cursor < dayEnd) {
+    slots.push({ type: "open", start: new Date(cursor), end: dayEnd });
+  }
+
+  return slots;
+}
+
 /** Props for the calendar */
 type Props = {
   events: Appointment[];
@@ -66,23 +141,75 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
   const [cursor, setCursor] = useState<Date>(startOfMonth(today));
   const [mode, setMode] = useState<"month" | "today">("month");
   const [selectedKey, setSelectedKey] = useState<string | null>(ymd(today));
+  const [modalKey, setModalKey] = useState<string | null>(null);
+
+  const leadById = useMemo(() => {
+    const map = new Map<string, Lead>();
+    for (const lead of leads ?? []) {
+      if (lead?.id) map.set(lead.id, lead);
+    }
+    return map;
+  }, [leads]);
+
+  const richEvents: RichEvent[] = useMemo(() => {
+    return (events ?? []).map((event) => {
+      const start = getEventDate(event);
+      const end = getEventEnd(event, start);
+      const lead = event.leadId ? leadById.get(event.leadId) : undefined;
+      const category = categorizeEvent(lead, event);
+      const color = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.other;
+      return { event, start, end, lead, category, color };
+    });
+  }, [events, leadById]);
 
   /** Map events by day key YYYY-MM-DD */
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, Appointment[]>();
-    for (const e of events ?? []) {
-      const d = getEventDate(e);
+    const map = new Map<string, RichEvent[]>();
+    for (const rich of richEvents) {
+      const d = rich.start ?? getEventDate(rich.event);
       if (!d) continue;
       const key = ymd(d);
       if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(e);
+      map.get(key)!.push(rich);
     }
     return map;
-  }, [events]);
+  }, [richEvents]);
 
   const selectedDate: Date | null = useMemo(() => {
     return selectedKey ? new Date(`${selectedKey}T00:00:00`) : null;
   }, [selectedKey]);
+
+  const selectedEvents = useMemo(() => {
+    if (!selectedKey) return [] as RichEvent[];
+    const list = eventsByDay.get(selectedKey) ?? [];
+    return [...list].sort((a, b) => (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0));
+  }, [selectedKey, eventsByDay]);
+
+  const modalEvents = useMemo(() => {
+    if (!modalKey) return [] as RichEvent[];
+    const list = eventsByDay.get(modalKey) ?? [];
+    return [...list].sort((a, b) => (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0));
+  }, [modalKey, eventsByDay]);
+
+  const modalDate = useMemo(() => {
+    return modalKey ? new Date(`${modalKey}T00:00:00`) : null;
+  }, [modalKey]);
+
+  const closeModal = () => setModalKey(null);
+
+  const modalSlots = useMemo(() => {
+    if (!modalDate) return [] as DaySlot[];
+    return buildDaySchedule(modalEvents, modalDate);
+  }, [modalEvents, modalDate]);
+
+  useEffect(() => {
+    if (!modalDate) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeModal();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [modalDate]);
 
   /** Build visible month grid (6x7 cells) starting on Sunday */
   const monthCells = useMemo(() => {
@@ -101,14 +228,15 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
 
   /** Today list (filtered) */
   const todayList = useMemo(() => {
-    return (events ?? []).filter((e) => {
-      const d = getEventDate(e);
+    return richEvents.filter((rich) => {
+      const d = rich.start;
       return d ? sameDay(d, today) : false;
     });
-  }, [events, today]);
+  }, [richEvents, today]);
 
   return (
-    <div className="w-full">
+    <>
+      <div className="w-full">
       {/* Toolbar */}
       <div className="crm-toolbar flex flex-wrap items-center justify-between gap-2">
         {/* Left: Month nav */}
@@ -174,22 +302,29 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
             <div className="text-sm text-muted-foreground p-3">No bookings today.</div>
           ) : (
             <ul className="divide-y glass-sep">
-              {todayList.map((e: any) => {
-                const start = getEventDate(e);
-                const end = getEventEnd(e, start);
+              {todayList.map((rich) => {
+                const start = rich.start;
+                const end = rich.end;
+                const event = rich.event;
                 const timeLabel = [toTime(start), toTime(end)].filter(Boolean).join(" – ");
                 return (
-                  <li key={e.id} className="py-2 px-2">
+                  <li key={event.id} className="py-2 px-2">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="font-medium">{e.title || e.service || "Appointment"}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: rich.color }}
+                          />
+                          {event.title || event.service || "Appointment"}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {timeLabel}
-                          {e.location ? ` · ${e.location}` : ""}
+                          {event.location ? ` · ${event.location}` : ""}
                         </div>
                       </div>
-                      {e.price != null && (
-                        <div className="text-sm font-medium">${Math.round(e.price)}</div>
+                      {event.price != null && (
+                        <div className="text-sm font-medium">${Math.round(event.price)}</div>
                       )}
                     </div>
                   </li>
@@ -219,11 +354,40 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                 const items = eventsByDay.get(key) ?? [];
                 const isSel = selectedKey === key;
                 const isTodayCell = sameDay(d, today);
+                const categories = new Set(items.map((item) => item.category));
+                let dayStyle: React.CSSProperties | undefined;
+                if (items.length === 0) {
+                  dayStyle = {
+                    backgroundColor: hexToRgba(CATEGORY_COLORS.pending, 0.12),
+                    borderColor: hexToRgba(CATEGORY_COLORS.pending, 0.5),
+                  };
+                } else if (categories.has("new")) {
+                  dayStyle = {
+                    backgroundColor: hexToRgba(CATEGORY_COLORS.new, 0.12),
+                    borderColor: hexToRgba(CATEGORY_COLORS.new, 0.55),
+                  };
+                } else if (categories.has("pending")) {
+                  dayStyle = {
+                    backgroundColor: hexToRgba(CATEGORY_COLORS.pending, 0.12),
+                    borderColor: hexToRgba(CATEGORY_COLORS.pending, 0.55),
+                  };
+                } else if (categories.has("booked")) {
+                  dayStyle = {
+                    backgroundColor: hexToRgba(CATEGORY_COLORS.booked, 0.12),
+                    borderColor: hexToRgba(CATEGORY_COLORS.booked, 0.55),
+                  };
+                }
+                if (!inMonth) {
+                  dayStyle = undefined;
+                }
 
                 return (
                   <button
                     key={`${key}-${idx}`}
-                    onClick={() => setSelectedKey(key)}
+                    onClick={() => {
+                      setSelectedKey(key);
+                      setModalKey(key);
+                    }}
                     className={[
                       "relative h-[92px] sm:h-[110px] rounded-xl border p-1.5 text-left",
                       "transition hover:bg-accent/10",
@@ -231,6 +395,7 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                       isSel ? "ring-2 ring-[--ring]" : "",
                       isTodayCell ? "border-[var(--gold)]" : "border-border/60",
                     ].join(" ")}
+                    style={dayStyle}
                   >
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-medium">{d.getDate()}</span>
@@ -238,7 +403,18 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                         <span className="inline-flex items-center gap-1 rounded-full bg-card/70 px-1.5 py-0.5 text-[10px]">
                           <span
                             className="inline-block h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: "var(--sage)" }}
+                            style={{
+                              backgroundColor:
+                                CATEGORY_COLORS[
+                                  categories.has("new")
+                                    ? "new"
+                                    : categories.has("pending")
+                                    ? "pending"
+                                    : categories.has("booked")
+                                    ? "booked"
+                                    : "other"
+                                ],
+                            }}
                           />
                           {items.length}
                         </span>
@@ -247,17 +423,22 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
 
                     {/* Event chips (max 2) */}
                     <div className="mt-1 space-y-1">
-                      {items.slice(0, 2).map((e) => (
+                      {items.slice(0, 2).map((rich) => (
                         <div
-                          key={e.id}
+                          key={rich.event.id}
                           onClick={(ev) => {
                             ev.stopPropagation();
-                            onEventOpen?.(e);
+                            onEventOpen?.(rich.event);
                           }}
-                          className="truncate rounded-lg border border-border/70 bg-card/75 px-1.5 py-0.5 text-[11px] hover:bg-accent/20"
-                          title={e.title || e.service || "Appointment"}
+                          className="truncate rounded-lg border px-1.5 py-0.5 text-[11px] hover:bg-accent/20"
+                          style={{
+                            backgroundColor: hexToRgba(rich.color, 0.18),
+                            borderColor: hexToRgba(rich.color, 0.5),
+                            color: "#1f1a17",
+                          }}
+                          title={rich.event.title || rich.event.service || "Appointment"}
                         >
-                          {e.title || e.service || "Appointment"}
+                          {rich.event.title || rich.event.service || "Appointment"}
                         </div>
                       ))}
                       {items.length > 2 && (
@@ -291,26 +472,36 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
 
             {selectedDate && (
               <ul className="mt-2 divide-y glass-sep">
-                {(eventsByDay.get(ymd(selectedDate)) ?? []).map((e) => {
-                  const start = getEventDate(e);
-                  const end = getEventEnd(e, start);
+                {selectedEvents.map((rich) => {
+                  const event = rich.event;
+                  const start = rich.start;
+                  const end = rich.end;
                   const timeLabel = [toTime(start), toTime(end)].filter(Boolean).join(" – ");
                   return (
-                    <li key={e.id} className="py-2">
+                    <li key={event.id} className="py-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">
-                            {e.title || e.service || "Appointment"}
+                          <div className="font-medium text-sm flex items-center gap-2">
+                            <span
+                              className="inline-block h-2 w-2 rounded-full"
+                              style={{ backgroundColor: rich.color }}
+                            />
+                            {event.title || event.service || "Appointment"}
                           </div>
                           <div className="text-xs text-muted-foreground">{timeLabel}</div>
+                          {rich.lead?.stage && (
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                              {rich.lead.stage}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {e.price != null && (
-                            <span className="text-xs font-medium">${Math.round(e.price)}</span>
+                          {event.price != null && (
+                            <span className="text-xs font-medium">${Math.round(event.price)}</span>
                           )}
                           <button
                             className="h-8 rounded-md border border-border/60 px-2 text-xs hover:bg-accent/20"
-                            onClick={() => onEventOpen?.(e)}
+                            onClick={() => onEventOpen?.(event)}
                           >
                             Open
                           </button>
@@ -319,14 +510,165 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                     </li>
                   );
                 })}
-                {(eventsByDay.get(ymd(selectedDate)) ?? []).length === 0 && (
-                  <li className="py-2 text-sm text-muted-foreground">No events on this day.</li>
+                {selectedEvents.length === 0 && (
+                  <li className="py-2 text-sm text-muted-foreground flex items-center justify-between">
+                    <span>No events on this day.</span>
+                    {onDayCreate && selectedDate && (
+                      <button
+                        className="h-8 rounded-lg border border-border/60 px-2 text-xs hover:bg-accent/20"
+                        onClick={() => onDayCreate(selectedDate)}
+                      >
+                        + Add lead
+                      </button>
+                    )}
+                  </li>
                 )}
               </ul>
             )}
           </div>
         </>
       )}
-    </div>
+      </div>
+
+      {modalDate &&
+        createPortal(
+          <div className="fixed inset-0 z-[300] flex items-center justify-center px-4 py-8">
+            <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
+            <div className="relative z-[310] w-full max-w-xl rounded-3xl border border-border/70 bg-popover/95 p-4 shadow-2xl backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold">
+                    {modalDate.toLocaleDateString(undefined, {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {modalEvents.length} booking{modalEvents.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {onDayCreate && (
+                    <button
+                      className="h-8 rounded-lg border border-border/60 px-3 text-xs font-medium hover:bg-accent/20"
+                      onClick={() => {
+                        onDayCreate?.(modalDate);
+                        closeModal();
+                      }}
+                    >
+                      + New lead
+                    </button>
+                  )}
+                  <button
+                    aria-label="Close"
+                    className="icon-chip h-8 w-8 rounded-xl inline-grid place-items-center"
+                    onClick={closeModal}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                {modalSlots.map((slot, idx) => {
+                  if (slot.type === "open") {
+                    const label = `${toTime(slot.start)} – ${toTime(slot.end)}`;
+                    return (
+                      <div
+                        key={`open-${idx}`}
+                        className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-900"
+                      >
+                        <div>
+                          <div className="font-semibold">Available</div>
+                          <div className="text-xs">{label}</div>
+                        </div>
+                        {onDayCreate && (
+                          <button
+                            className="h-7 rounded-lg border border-amber-400 px-2 text-xs font-medium hover:bg-amber-100"
+                            onClick={() => {
+                              const start = new Date(slot.start);
+                              onDayCreate?.(start);
+                              closeModal();
+                            }}
+                          >
+                            Add lead
+                          </button>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  const { rich } = slot;
+                  const event = rich.event;
+                  const leadName = rich.lead?.name ?? "Unnamed client";
+                  const timeLabel = `${toTime(slot.start)} – ${toTime(slot.end)}`;
+                  return (
+                    <div
+                      key={event.id}
+                      className="rounded-xl border px-3 py-2 shadow-sm"
+                      style={{
+                        borderColor: hexToRgba(rich.color, 0.5),
+                        backgroundColor: hexToRgba(rich.color, 0.12),
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-sm flex items-center gap-2">
+                            <span
+                              className="inline-block h-2 w-2 rounded-full"
+                              style={{ backgroundColor: rich.color }}
+                            />
+                            {event.title || event.service || "Appointment"}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{timeLabel}</div>
+                          <div className="text-xs mt-1 font-medium">{leadName}</div>
+                          {rich.lead?.stage && (
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                              {rich.lead.stage}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          {event.price != null && (
+                            <span className="text-xs font-semibold">${Math.round(event.price)}</span>
+                          )}
+                          <button
+                            className="h-7 rounded-lg border border-border/60 px-2 text-xs hover:bg-accent/20"
+                            onClick={() => {
+                              onEventOpen?.(event);
+                              closeModal();
+                            }}
+                          >
+                            Open
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {modalSlots.length === 0 && (
+                  <div className="rounded-xl border border-border/60 bg-popover/70 px-3 py-4 text-sm text-muted-foreground">
+                    No events scheduled. This day is wide open.
+                    {onDayCreate && (
+                      <button
+                        className="mt-3 block rounded-lg border border-border/60 px-3 py-2 text-xs font-medium hover:bg-accent/20"
+                        onClick={() => {
+                          onDayCreate?.(modalDate);
+                          closeModal();
+                        }}
+                      >
+                        + Add lead
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }

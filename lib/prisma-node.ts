@@ -5,11 +5,12 @@ const g = globalThis as unknown as { prisma?: PrismaClient };
 
 function createClient() {
   const base = new PrismaClient();
-  const useAccelerate =
-    process.env.DATABASE_URL?.startsWith("prisma://") ||
-    process.env.DATABASE_URL?.startsWith("prisma+postgres://") ||
-    !!process.env.PRISMA_ACCELERATE_URL;
-  return useAccelerate ? base.$extends(withAccelerate()) : base;
+  const accelerateEnabled =
+    process.env.NODE_ENV === "production" &&
+    (process.env.DATABASE_URL?.startsWith("prisma://") ||
+      process.env.DATABASE_URL?.startsWith("prisma+postgres://") ||
+      !!process.env.PRISMA_ACCELERATE_URL);
+  return accelerateEnabled ? base.$extends(withAccelerate()) : base;
 }
 
 export const prisma = g.prisma ?? createClient();

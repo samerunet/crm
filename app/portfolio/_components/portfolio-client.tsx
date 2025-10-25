@@ -11,7 +11,7 @@ import {
 } from 'react';
 
 const PHOTOS: { src: string; alt: string }[] = [
-  { src: '/portfolio/IMG_7267.JPG', alt: 'San Diego bridal makeup — soft glam (IMG_7267)' },
+  // { src: '/portfolio/IMG_7267.JPG', alt: 'San Diego bridal makeup — soft glam (IMG_7267)' },
   { src: '/portfolio/IMG_8397.JPG', alt: 'Luxury bridal makeup — modern neutral glam (IMG_8397)' },
   { src: '/portfolio/IMG_4266.JPG', alt: 'Bridal makeup with soft shimmer eye (IMG_4266)' },
   { src: '/portfolio/IMG_3969.JPG', alt: 'Classic bridal look with nude lip (IMG_3969)' },
@@ -26,6 +26,14 @@ const PHOTOS: { src: string; alt: string }[] = [
   { src: '/portfolio/IMG_3256.JPG', alt: 'Elegant bridal makeup — classic liner (IMG_3256)' },
   { src: '/portfolio/IMG_5347.JPG', alt: 'Modern bridal glam — bronzed glow (IMG_5347)' },
   { src: '/portfolio/IMG_7230.JPG', alt: 'Bridal look with soft matte finish (IMG_7230)' },
+  // { src: '/portfolio/12.JPG', alt: 'Studio bridal portrait — modern glam (12)' },
+  { src: '/portfolio/IMG_2107.JPG', alt: 'Radiant bridal glam — luminous skin (IMG_2107)' },
+  { src: '/portfolio/IMG_3156.JPG', alt: 'Soft bridal glam with peach tones (IMG_3156)' },
+  { src: '/portfolio/IMG_3163.JPG', alt: 'Romantic bridal makeup — full lashes (IMG_3163)' },
+  // { src: '/portfolio/IMG_3547.jpg', alt: 'Editorial bridal glam — smoked liner (IMG_3547)' },
+  //{ src: '/portfolio/IMG_3750.jpg', alt: 'Bridal portrait with bronzed glow (IMG_3750)' },
+  { src: '/portfolio/IMG_3971.JPG', alt: 'Glam bridal look with shimmer lid (IMG_3971)' },
+  // { src: '/portfolio/IMG_9791.jpg', alt: 'Natural light bridal glam — glossy lip (IMG_9791)' },
 ];
 
 export default function PortfolioClient() {

@@ -91,7 +91,7 @@ export default function KPIStrip({
   );
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <KPIBlock label="Bookings" value={booked} sublabel="All time" sparkline={bkSeries} />
       <KPIBlock label="Trials" value={trials} sublabel="All time" sparkline={trSeries} />
       <KPIBlock label="Service Revenue" value={fmtUSD(serviceRevenue)} sublabel="Payments received" sparkline={svSeries} />

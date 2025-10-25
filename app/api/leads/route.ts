@@ -1,7 +1,7 @@
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma-edge';
+import { prisma } from '@/lib/prisma-node';
 
 const toIso = (value: unknown) => {
   if (typeof value !== 'string') return undefined;
@@ -16,6 +16,7 @@ export async function GET() {
     });
     return NextResponse.json({ ok: true, leads });
   } catch (e: any) {
+    console.error('GET /api/leads failed', e);
     return NextResponse.json(
       { ok: false, error: e?.message ?? 'Failed to fetch leads' },
       { status: 500 },
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, lead }, { status: 201 });
   } catch (e: any) {
+    console.error('POST /api/leads failed', e);
     return NextResponse.json(
       { ok: false, error: e?.message ?? 'Failed to create lead' },
       { status: 500 },

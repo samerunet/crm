@@ -141,7 +141,7 @@ export default function Navbar() {
           {/* Brand → home */}
           <Link href="/" className="inline-flex items-center" aria-label="Home">
             <Image
-              src="/placeholder/logo.svg"
+              src="/logo.svg"
               alt="Fari Makeup"
               width={280}
               height={100}

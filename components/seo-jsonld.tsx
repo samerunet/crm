@@ -7,7 +7,7 @@ export default function SEOJsonLD({ canonical = 'https://farimakeup.com' }: { ca
     '@type': 'Organization',
     name: 'Fari Makeup',
     url: canonical,
-    logo: `${canonical}/favicon.svg`,
+    logo: `${canonical}/logo.svg`,
   };
 
   const service = {

@@ -179,6 +179,20 @@ export default function AdminDashboard() {
     void loadLeads();
   }, [loadLeads]);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<Lead>;
+      if (custom?.detail) {
+        setActiveLead(custom.detail);
+        setLeadOpen(true);
+      }
+    };
+    window.addEventListener("dashboard:navigateToLead", handler as EventListener);
+    return () => {
+      window.removeEventListener("dashboard:navigateToLead", handler as EventListener);
+    };
+  }, []);
+
   const handleDayCreate = (date: Date) => { setNewDate(date); setNewOpen(true); };
   const handleCreateLead = async (lead: Lead) => {
     try {

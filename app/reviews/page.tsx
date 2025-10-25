@@ -9,32 +9,32 @@ export const metadata: Metadata = {
   alternates: { canonical: '/reviews' },
 };
 
-const REVIEWS: ReviewDisplay[] = [
-  {
-    id: 'review-1',
-    name: 'Sophia M.',
-    service: 'Bridal Makeup · La Jolla Cove',
-    rating: 5,
-    highlight:
-      'Fari kept the entire morning serene. My bridal glam felt lightweight yet lasted through tears, ocean breeze, and dancing. Every photo still looks flawless.',
-  },
-  {
-    id: 'review-2',
-    name: 'Ashley T.',
-    service: 'Destination Wedding · Cabo San Lucas',
-    rating: 5,
-    highlight:
-      'She handled travel, on-site set up, and our large bridal party with ease. Everyone looked cohesive and fresh in the heat. Best glam experience ever.',
-  },
-  {
-    id: 'review-3',
-    name: 'Lauren P.',
-    service: 'Editorial Campaign · Downtown Los Angeles',
-    rating: 5,
-    highlight:
-      'From mood board through final frame, Fari delivered immaculate, camera-ready makeup and stayed on set for touch-ups. The creative team loved working with her.',
-  },
-];
+// const REVIEWS: ReviewDisplay[] = [
+//   {
+//     id: 'review-1',
+//     name: 'Sophia M.',
+//     service: 'Bridal Makeup · La Jolla Cove',
+//     rating: 5,
+//     highlight:
+//       'Fari kept the entire morning serene. My bridal glam felt lightweight yet lasted through tears, ocean breeze, and dancing. Every photo still looks flawless.',
+//   },
+//   {
+//     id: 'review-2',
+//     name: 'Ashley T.',
+//     service: 'Destination Wedding · Cabo San Lucas',
+//     rating: 5,
+//     highlight:
+//       'She handled travel, on-site set up, and our large bridal party with ease. Everyone looked cohesive and fresh in the heat. Best glam experience ever.',
+//   },
+//   {
+//     id: 'review-3',
+//     name: 'Lauren P.',
+//     service: 'Editorial Campaign · Downtown Los Angeles',
+//     rating: 5,
+//     highlight:
+//       'From mood board through final frame, Fari delivered immaculate, camera-ready makeup and stayed on set for touch-ups. The creative team loved working with her.',
+//   },
+// ];
 
 export default function ReviewsPage() {
   return (
@@ -65,7 +65,10 @@ export default function ReviewsPage() {
         </header>
 
         <div className="mt-8 md:mt-10">
-          <ReviewsCarousel reviews={REVIEWS} />
+          {/* <ReviewsCarousel reviews={REVIEWS} /> */}
+          <p className="mx-auto max-w-2xl text-sm text-white/75 md:text-base ">
+           COMING SOON ...
+          </p>
         </div>
       </section>
 
