@@ -40,17 +40,32 @@ export default function CustomerModal({
   onClose,
   onUpdate,
   onDelete,
+  onSave,
+  canSave = false,
+  saving = false,
+  saveError,
 }: {
   open: boolean;
   lead: Lead | null;
   onClose: () => void;
   onUpdate: (lead: Lead) => void;
   onDelete?: (id: string) => void;
+  onSave?: (lead: AnyLead) => void | Promise<void>;
+  canSave?: boolean;
+  saving?: boolean;
+  saveError?: string | null;
 }) {
   const model = useMemo<AnyLead | null>(() => (lead ? { ...lead } : null), [lead]);
   const [tab, setTab] = useState<Tab>("details");
 
   if (!open || !model) return null;
+
+  const handleSave = () => {
+    if (!onSave) return;
+    Promise.resolve(onSave(model)).catch((err) => {
+      console.error("Lead save handler rejected", err);
+    });
+  };
 
   const setField = (key: keyof AnyLead, val: any) => onUpdate({ ...(model as AnyLead), [key]: val });
   const pushTo = (key: keyof AnyLead, item: any) => {
@@ -82,19 +97,9 @@ export default function CustomerModal({
 
       {/* Centered modal */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center p-4 sm:p-6">
-        <div
-          className="pointer-events-auto w-full max-w-[980px] rounded-2xl border shadow-2xl"
-          style={{
-            // very light “white glass” (≈90% transparent look)
-            background: "color-mix(in oklab, var(--card) 26%, transparent)",
-            WebkitBackdropFilter: "blur(24px) saturate(125%)",
-            backdropFilter: "blur(24px) saturate(125%)",
-            borderColor: "color-mix(in oklab, var(--border) 72%, transparent)",
-            boxShadow: "0 28px 80px rgba(0,0,0,.22)",
-          }}
-        >
+        <div className="pointer-events-auto wglass-strong max-w-[980px] w-full rounded-2xl border border-border/60 shadow-[0_28px_80px_rgba(0,0,0,0.22)]">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-border/60">
+          <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-border/50">
             <div>
               <div className="text-lg font-semibold">
                 {model.name || "Untitled client"}
@@ -104,8 +109,19 @@ export default function CustomerModal({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {onSave && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="gbtn h-9 rounded-xl px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canSave || saving}
+                >
+                  {saving ? "Saving…" : canSave ? "Save changes" : "Saved"}
+                </button>
+              )}
               {onDelete && (
                 <button
+                  type="button"
                   onClick={() => onDelete(model.id)}
                   className="h-9 rounded-xl px-3 text-sm border border-destructive/60 text-destructive hover:bg-destructive/10"
                 >
@@ -113,6 +129,7 @@ export default function CustomerModal({
                 </button>
               )}
               <button
+                type="button"
                 onClick={onClose}
                 className="icon-chip h-9 w-9 inline-grid place-items-center rounded-xl"
                 aria-label="Close"
@@ -121,6 +138,12 @@ export default function CustomerModal({
               </button>
             </div>
           </div>
+
+          {saveError && (
+            <div className="mx-4 sm:mx-5 mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {saveError}
+            </div>
+          )}
 
           {/* Tabs */}
           <div className="px-4 sm:px-5 pt-3">
@@ -391,8 +414,7 @@ function NotesView({
       <div className="grid gap-2">
         {notes.length === 0 && <div className="text-sm text-muted-foreground">No notes yet.</div>}
         {notes.map((n) => (
-          <div key={n.id} className="rounded-2xl border border-border/70 p-3"
-               style={{ background: "color-mix(in oklab, var(--card) 18%, transparent)", backdropFilter: "blur(14px) saturate(120%)" }}>
+          <div key={n.id} className="wglass panel rounded-2xl border-border/70">
             <div className="text-sm">{n.text}</div>
             <div className="mt-1 text-xs text-muted-foreground">{new Date(n.at).toLocaleString()}</div>
             <div className="mt-2">
@@ -430,8 +452,7 @@ function ContractsView({
       {contracts.length === 0 && <div className="text-sm text-muted-foreground">No contracts yet.</div>}
 
       {contracts.map((c) => (
-        <div key={c.id} className="rounded-2xl border border-border/70 p-3"
-             style={{ background: "color-mix(in oklab, var(--card) 18%, transparent)", backdropFilter: "blur(14px) saturate(120%)" }}>
+        <div key={c.id} className="wglass panel rounded-2xl border-border/70">
           <div className="flex flex-wrap items-center gap-2 justify-between">
             <div className="text-sm font-medium">#{c.id}</div>
             <div className="flex items-center gap-2">
@@ -565,8 +586,7 @@ function InvoicesView({
       {invoices.length === 0 && <div className="text-sm text-muted-foreground">No invoices yet.</div>}
 
       {invoices.map((inv) => (
-        <div key={inv.id} className="rounded-2xl border border-border/70 p-3"
-             style={{ background: "color-mix(in oklab, var(--card) 18%, transparent)", backdropFilter: "blur(14px) saturate(120%)" }}>
+        <div key={inv.id} className="wglass panel rounded-2xl border-border/70">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-sm font-medium">#{inv.id}</div>
             <div className="flex items-center gap-2">

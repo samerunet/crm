@@ -8,7 +8,7 @@ import NewLeadModal from "./NewLeadModal";
 import HeaderAlerts from "./HeaderAlerts";
 import KPIStrip from "./KPIStrip";
 import CustomerModal from "./CustomerModal";
-import { Lead, Appointment, Sale, STAGES } from "./types";
+import { Lead, Appointment, Sale, STAGES, LeadStage } from "./types";
 
 /* ----- demo data (replace with real data) ----- */
 const nowMs = Date.now();
@@ -122,6 +122,115 @@ const safeIso = (value?: string | Date | null) => {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
+const formatDateForMessage = (value?: string | Date | null) => {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+    return trimmed;
+  }
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().slice(0, 10);
+};
+
+const buildMessageFromLead = (lead: Lead & Record<string, any>) => {
+  const primary =
+    (Array.isArray(lead.notes) && lead.notes[0]?.text) ||
+    (lead.intake?.initialMessage as string | undefined) ||
+    (typeof lead.notes === "string" ? lead.notes : "") ||
+    "";
+
+  const serviceLabel =
+    lead.eventType ||
+    (typeof lead.intake?.service === "string" ? lead.intake.service : undefined) ||
+    undefined;
+  const preferredDate =
+    lead.intake?.preferredDate || lead.dateOfService || undefined;
+  const eventTime = lead.eventTime || lead.intake?.eventTime || undefined;
+  const location = lead.location || lead.intake?.location || undefined;
+  const partySize =
+    typeof lead.partySize === "number"
+      ? lead.partySize
+      : typeof lead.intake?.partySize === "number"
+      ? lead.intake.partySize
+      : undefined;
+  const addOns =
+    (Array.isArray(lead.addOns) && lead.addOns.length
+      ? lead.addOns
+      : Array.isArray(lead.intake?.addOns)
+      ? lead.intake.addOns
+      : []
+    )
+      .map((item: any) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean);
+
+  const detailLines: string[] = [];
+  if (serviceLabel) detailLines.push(`Service: ${serviceLabel}`);
+  if (preferredDate) detailLines.push(`Preferred date: ${formatDateForMessage(preferredDate)}`);
+  if (eventTime) detailLines.push(`Event time: ${eventTime}`);
+  if (location) detailLines.push(`Location: ${location}`);
+  if (typeof partySize === "number") detailLines.push(`Party size: ${partySize}`);
+  if (addOns.length) detailLines.push(`Add-ons: ${addOns.join(", ")}`);
+  if (lead.stage) detailLines.push(`Stage: ${lead.stage}`);
+  if (lead.phone) detailLines.push(`Phone: ${lead.phone}`);
+  if (lead.email && lead.email !== EMAIL_PLACEHOLDER) detailLines.push(`Email: ${lead.email}`);
+  if (lead.source) detailLines.push(`Source: ${lead.source}`);
+  if (lead.intake?.skinType) detailLines.push(`Skin type: ${lead.intake.skinType}`);
+  if (lead.intake?.allergies) detailLines.push(`Allergies: ${lead.intake.allergies}`);
+  if (lead.intake?.style) detailLines.push(`Preferred style: ${lead.intake.style}`);
+  if (lead.intake?.refs) detailLines.push(`Reference links: ${lead.intake.refs}`);
+
+  const extraNotes: string[] = [];
+  if (lead.internalNotes) extraNotes.push(`Internal notes: ${lead.internalNotes}`);
+  if (lead.intake?.notes) extraNotes.push(`Intake notes: ${lead.intake.notes}`);
+  if (Array.isArray(lead.notes)) {
+    lead.notes.slice(1).forEach((n: any) => {
+      if (!n?.text) return;
+      const timestamp =
+        (typeof n.at === "string" && n.at) || safeIso(n.at) || formatDateForMessage(n.at) || "";
+      extraNotes.push(timestamp ? `Note (${timestamp}): ${n.text}` : n.text);
+    });
+  }
+
+  const sections = [
+    primary.trim(),
+    detailLines.join("\n").trim(),
+    extraNotes.join("\n").trim(),
+  ].filter(Boolean);
+
+  return sections.length ? sections.join("\n\n") : null;
+};
+
+const buildLeadUpdatePayload = (lead: Lead & Record<string, any>) => {
+  const email = lead.email?.trim() || EMAIL_PLACEHOLDER;
+  const eventDateIso =
+    safeIso(lead.dateOfService) ??
+    safeIso(lead.intake?.preferredDate ?? undefined) ??
+    null;
+
+  const message = buildMessageFromLead(lead);
+
+  return {
+    id: lead.id,
+    name: lead.name?.trim() || null,
+    email,
+    phone: lead.phone?.trim() || null,
+    eventDate: eventDateIso,
+    message,
+    source: lead.source?.trim() || null,
+  };
+};
+
+const leadSnapshot = (lead: Lead & Record<string, any>) =>
+  JSON.stringify({
+    ...buildLeadUpdatePayload(lead),
+    stage: lead.stage,
+  });
+
 const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
   const eventDateIso = safeIso(row.eventDate);
   const { note, details } = parseMessageDetails(row.message ?? undefined);
@@ -140,6 +249,17 @@ const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
         .map((item) => item.trim())
         .filter(Boolean)
     : undefined;
+  const stageRaw = details["stage"];
+  const normalizedStage =
+    typeof stageRaw === "string"
+      ? STAGES.find((s) => s.toLowerCase() === stageRaw.trim().toLowerCase())
+      : undefined;
+  const skinType = details["skin type"] || undefined;
+  const allergies = details["allergies"] || undefined;
+  const preferredStyle = details["preferred style"] || undefined;
+  const refs = details["reference links"] || undefined;
+  const intakeNotes = details["intake notes"] || undefined;
+  const internalNotes = details["internal notes"] || undefined;
 
   const primaryNote = note || (row.message?.trim()?.length ? row.message : "");
   const createdIso = safeIso(row.createdAt) ?? new Date().toISOString();
@@ -157,18 +277,24 @@ const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
     capturedAt: createdIso,
   };
   if (serviceLabel) intake.service = serviceLabel;
+  if (preferredDateIso) intake.preferredDate = preferredDateIso;
   if (eventTime) intake.eventTime = eventTime;
   if (location) intake.location = location;
   if (typeof partySize === "number") intake.partySize = partySize;
   if (addOns) intake.addOns = addOns;
   if (primaryNote) intake.initialMessage = primaryNote;
+  if (skinType) intake.skinType = skinType;
+  if (allergies) intake.allergies = allergies;
+  if (preferredStyle) intake.style = preferredStyle;
+  if (refs) intake.refs = refs;
+  if (intakeNotes) intake.notes = intakeNotes;
 
   return {
     id: row.id,
     name: row.name || "New inquiry",
     email: row.email && row.email !== EMAIL_PLACEHOLDER ? row.email : undefined,
     phone: row.phone || undefined,
-    stage: "uncontacted",
+    stage: (normalizedStage ?? "uncontacted") as LeadStage,
     createdAt: createdIso,
     dateOfService: eventDateIso ?? preferredDateIso,
     eventTime,
@@ -179,6 +305,7 @@ const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
     notes: noteEntry,
     intake,
     addOns,
+    internalNotes: internalNotes || undefined,
     source: row.source ?? undefined,
   } as Lead & Record<string, any>;
 };
@@ -217,9 +344,34 @@ export default function AdminDashboard() {
   // Lead details modal
   const [leadOpen, setLeadOpen] = useState(false);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  const [leadBaseline, setLeadBaseline] = useState<(Lead & Record<string, any>) | null>(null);
+  const [savingLead, setSavingLead] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const openLead = (l: Lead) => { setActiveLead(l); setLeadOpen(true); };
-  const closeLead = () => setLeadOpen(false);
+  const openLead = (l: Lead) => {
+    setActiveLead(l);
+    setLeadBaseline(JSON.parse(JSON.stringify(l)) as Lead & Record<string, any>);
+    setSaveError(null);
+    setLeadOpen(true);
+  };
+  const closeLead = () => {
+    if (activeLead && leadBaseline) {
+      const hasChanges =
+        leadSnapshot(activeLead as Lead & Record<string, any>) !== leadSnapshot(leadBaseline);
+      if (hasChanges) {
+        const reverted = JSON.parse(JSON.stringify(leadBaseline)) as Lead & Record<string, any>;
+        setLeads((prev) =>
+          prev.map((l) =>
+            l.id === activeLead.id ? reverted : l,
+          ),
+        );
+      }
+    }
+    setLeadOpen(false);
+    setActiveLead(null);
+    setLeadBaseline(null);
+    setSaveError(null);
+  };
 
   // Create & update helpers
   const loadLeads = useCallback(async () => {
@@ -296,11 +448,47 @@ export default function AdminDashboard() {
   const handleUpdateLead = (patch: Lead) => {
     setLeads(prev => prev.map(l => (l.id === patch.id ? { ...l, ...patch } : l)));
     setActiveLead(patch);
+    setSaveError(null);
   };
   const handleDeleteLead = (id: string) => {
     setLeads(prev => prev.filter(l => l.id !== id));
     setLeadOpen(false);
+    setActiveLead(null);
+    setLeadBaseline(null);
   };
+
+  const handleSaveLead = async (draft: Lead & Record<string, any>) => {
+    setSavingLead(true);
+    setSaveError(null);
+    try {
+      const payload = buildLeadUpdatePayload(draft);
+      const res = await fetch("/api/leads", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok || !json.lead) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
+      const updated = mapDbLead(json.lead);
+      setLeads(prev => prev.map((l) => (l.id === updated.id ? updated : l)));
+      setActiveLead(updated);
+      setLeadBaseline(JSON.parse(JSON.stringify(updated)) as Lead & Record<string, any>);
+    } catch (err: any) {
+      console.error("Failed to save lead", err);
+      setSaveError(err?.message || "Failed to save lead");
+    } finally {
+      setSavingLead(false);
+    }
+  };
+
+  const isLeadDirty = useMemo(() => {
+    if (!activeLead || !leadBaseline) return false;
+    return (
+      leadSnapshot(activeLead as Lead & Record<string, any>) !== leadSnapshot(leadBaseline)
+    );
+  }, [activeLead, leadBaseline]);
 
   // Filter + sort for Leads view
   const visibleLeads = useMemo(() => {
@@ -627,6 +815,10 @@ export default function AdminDashboard() {
         onClose={closeLead}
         onUpdate={handleUpdateLead}
         onDelete={handleDeleteLead}
+        onSave={handleSaveLead}
+        canSave={isLeadDirty}
+        saving={savingLead}
+        saveError={saveError}
       />
     </div>
   );

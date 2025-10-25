@@ -56,7 +56,7 @@ export default function BookingBanner({
   headlineElement = 'span',
   sublineAlign = 'start',
   sublineClassName,
-  oneLine = true,
+  oneLine = false,
   className = '',
 }: Props) {
   const justify =
@@ -64,14 +64,14 @@ export default function BookingBanner({
       ? 'justify-center text-center'
       : align === 'right'
         ? 'justify-end text-right'
-        : 'justify-start text-left';
+        : 'justify-center text-center';
   const HeadlineTag = headlineElement as keyof JSX.IntrinsicElements;
   const stackClass =
     align === 'right'
       ? 'flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3'
       : align === 'center'
         ? 'flex w-full flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:justify-center sm:gap-3'
-        : 'flex w-full flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3';
+        : 'flex w-full flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:justify-center sm:gap-3 text-center';
   const baseBadgeClass =
     'inline-flex items-center rounded-full border border-white/40 bg-white/[0.22] px-3 py-1 text-sm text-black shadow-[0_10px_28px_rgba(0,0,0,0.18)] backdrop-blur-md';
   const sublineAlignClass =
@@ -83,7 +83,7 @@ export default function BookingBanner({
         ? 'sm:mx-auto text-center'
         : align === 'right'
           ? 'text-right'
-          : 'text-left sm:ml-auto';
+          : 'self-start text-left sm:self-auto sm:ml-auto';
 
   return (
     <section
@@ -132,6 +132,7 @@ export default function BookingBanner({
               baseBadgeClass,
               sublineClassName ?? 'text-foreground/90',
               sublineAlignClass,
+              'self-center w-full sm:w-auto sm:self-auto',
               oneLine && align === 'left' && sublineAlign !== 'end' && 'truncate',
             )}
             style={{

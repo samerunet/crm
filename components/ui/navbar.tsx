@@ -136,17 +136,17 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/65 backdrop-blur">
-      <nav className="f-container py-2 sm:py-3" aria-label="Primary">
-        <div className="flex items-center justify-between gap-3">
+      <nav className="f-container py-1.5 sm:py-2" aria-label="Primary">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           {/* Brand → home */}
           <Link href="/" className="inline-flex items-center" aria-label="Home">
             <Image
               src="/logo.svg"
               alt="Fari Makeup"
-              width={280}
-              height={100}
+              width={320}
+              height={140}
               priority
-              className="h-12 sm:h-14 w-auto"
+              className="block h-16 w-auto object-contain sm:h-20"
             />
           </Link>
 

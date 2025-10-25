@@ -14,6 +14,8 @@ type LeadRecord = {
   createdAt: Date;
 };
 
+const EMAIL_PLACEHOLDER = 'no-email@placeholder.invalid';
+
 const toIso = (value: unknown) => {
   if (typeof value !== 'string') return undefined;
   const dt = new Date(value);
@@ -82,7 +84,7 @@ export async function POST(req: Request) {
       const payload = await req.json();
       const name = typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) : null;
       const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
-      const email = emailRaw || 'no-email@placeholder.invalid';
+      const email = emailRaw || EMAIL_PLACEHOLDER;
       const phone =
         typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
       const message =
@@ -119,7 +121,7 @@ export async function POST(req: Request) {
     const payload = await req.json();
     const name = typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) : null;
     const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
-    const email = emailRaw || 'no-email@placeholder.invalid';
+    const email = emailRaw || EMAIL_PLACEHOLDER;
     const phone =
       typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
     const message =
@@ -145,6 +147,102 @@ export async function POST(req: Request) {
     console.error('POST /api/leads failed', e);
     return NextResponse.json(
       { ok: false, error: e?.message ?? 'Failed to create lead' },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(req: Request) {
+  if (useDemoStore) {
+    try {
+      const payload = await req.json();
+      const id = typeof payload?.id === 'string' ? payload.id : null;
+      if (!id) {
+        return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 });
+      }
+      const idx = demoLeads.findIndex((lead) => lead.id === id);
+      if (idx === -1) {
+        return NextResponse.json({ ok: false, error: 'Lead not found' }, { status: 404 });
+      }
+      const name =
+        typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) || null : null;
+      const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
+      const email = emailRaw || EMAIL_PLACEHOLDER;
+      const phone =
+        typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
+      const message =
+        typeof payload?.message === 'string' ? payload.message.slice(0, 10000) || null : null;
+      const source =
+        typeof payload?.source === 'string' ? payload.source.trim().slice(0, 150) || null : null;
+      const eventDateIso = toIso(payload?.eventDate);
+      let eventDate = demoLeads[idx].eventDate;
+      if (eventDateIso) {
+        eventDate = new Date(eventDateIso);
+      } else if (payload?.eventDate === null) {
+        eventDate = null;
+      }
+
+      const updated: LeadRecord = {
+        ...demoLeads[idx],
+        name,
+        email,
+        phone,
+        message,
+        source,
+        eventDate,
+      };
+      demoLeads[idx] = updated;
+      return NextResponse.json({ ok: true, lead: updated });
+    } catch (e: any) {
+      console.error('PATCH /api/leads demo mode failed', e);
+      return NextResponse.json(
+        { ok: false, error: e?.message ?? 'Failed to update lead' },
+        { status: 500 },
+      );
+    }
+  }
+
+  try {
+    const payload = await req.json();
+    const id = typeof payload?.id === 'string' ? payload.id : null;
+    if (!id) {
+      return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 });
+    }
+    const name =
+      typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) || null : null;
+    const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
+    const email = emailRaw || EMAIL_PLACEHOLDER;
+    const phone =
+      typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
+    const message =
+      typeof payload?.message === 'string' ? payload.message.slice(0, 10000) || null : null;
+    const source =
+      typeof payload?.source === 'string' ? payload.source.trim().slice(0, 150) || null : null;
+    const eventDateIso = toIso(payload?.eventDate);
+
+    const data: Record<string, unknown> = {
+      name,
+      email,
+      phone,
+      message,
+      source,
+    };
+    if (eventDateIso) {
+      data.eventDate = new Date(eventDateIso);
+    } else if (payload?.eventDate === null) {
+      data.eventDate = null;
+    }
+
+    const lead = await prisma.lead.update({
+      where: { id },
+      data,
+    });
+
+    return NextResponse.json({ ok: true, lead });
+  } catch (e: any) {
+    console.error('PATCH /api/leads failed', e);
+    return NextResponse.json(
+      { ok: false, error: e?.message ?? 'Failed to update lead' },
       { status: 500 },
     );
   }
