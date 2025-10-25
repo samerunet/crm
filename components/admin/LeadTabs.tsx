@@ -27,9 +27,20 @@ export default function LeadTabs({
   );
   const contactLine =
     [lead.phone, lead.email].filter(Boolean).join(' · ') || '—';
-  const notesValue = Array.isArray(lead.notes)
-    ? lead.notes.join('\n')
-    : lead.notes ?? '';
+  const notesValue = (() => {
+    if (Array.isArray(lead.notes)) {
+      return lead.notes
+        .map((entry: any) =>
+          typeof entry === 'string' ? entry : typeof entry?.text === 'string' ? entry.text : '',
+        )
+        .filter(Boolean)
+        .join('\n');
+    }
+    if (lead.notes && typeof lead.notes === 'object' && 'text' in (lead.notes as any)) {
+      return (lead.notes as any).text ?? '';
+    }
+    return (lead.notes as any) ?? '';
+  })();
 
   const toDateTime = (value: string | Date | undefined) => {
     if (!value) return 'Unknown';

@@ -28,13 +28,16 @@ export default function KPIStrip({
   events,
   sales,
   leads,
+  timeframeLabel,
 }: {
   events: Appointment[];
   sales: Sale[];
   leads: Lead[];
+  timeframeLabel?: string;
 }) {
   const eventList = Array.isArray(events) ? events : [];
   const saleList = Array.isArray(sales) ? sales : [];
+  const label = timeframeLabel ?? "All time";
 
   const serviceRevenue = useMemo(
     () => eventList.reduce((s, e: any) => s + (e?.price ?? 0), 0),
@@ -92,10 +95,10 @@ export default function KPIStrip({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <KPIBlock label="Bookings" value={booked} sublabel="All time" sparkline={bkSeries} />
-      <KPIBlock label="Trials" value={trials} sublabel="All time" sparkline={trSeries} />
-      <KPIBlock label="Service Revenue" value={fmtUSD(serviceRevenue)} sublabel="Payments received" sparkline={svSeries} />
-      <KPIBlock label="Guide Revenue" value={fmtUSD(guideRevenue)} sublabel="Payments received" sparkline={gdSeries} />
+      <KPIBlock label="Bookings" value={booked} sublabel={label} sparkline={bkSeries} />
+      <KPIBlock label="Trials" value={trials} sublabel={label} sparkline={trSeries} />
+      <KPIBlock label="Service Revenue" value={fmtUSD(serviceRevenue)} sublabel={`${label} · Payments`} sparkline={svSeries} />
+      <KPIBlock label="Guide Revenue" value={fmtUSD(guideRevenue)} sublabel={`${label} · Payments`} sparkline={gdSeries} />
     </div>
   );
 }

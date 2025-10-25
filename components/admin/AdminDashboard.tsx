@@ -91,43 +91,110 @@ type DbLead = {
   createdAt: Date | string;
 };
 
-const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
-  const eventDateIso =
-    row.eventDate instanceof Date
-      ? row.eventDate.toISOString()
-      : row.eventDate
-      ? new Date(row.eventDate).toISOString()
-      : undefined;
+const EMAIL_PLACEHOLDER = "no-email@placeholder.invalid";
 
-  const emailPlaceholder = "no-email@placeholder.invalid";
+const parseMessageDetails = (raw?: string | null) => {
+  if (!raw) {
+    return { note: null, details: {} as Record<string, string> };
+  }
+  const parts = raw.split(/\n{2,}/);
+  const note = parts.shift()?.trim() || null;
+  const detailLines = parts
+    .join("\n")
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const details: Record<string, string> = {};
+  for (const line of detailLines) {
+    const idx = line.indexOf(":");
+    if (idx <= 0) continue;
+    const key = line.slice(0, idx).trim().toLowerCase();
+    const value = line.slice(idx + 1).trim();
+    if (!value) continue;
+    details[key] = value;
+  }
+  return { note, details };
+};
+
+const safeIso = (value?: string | Date | null) => {
+  if (!value) return undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+};
+
+const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
+  const eventDateIso = safeIso(row.eventDate);
+  const { note, details } = parseMessageDetails(row.message ?? undefined);
+
+  const preferredDateIso = safeIso(details["preferred date"]);
+  const serviceLabel = details["service"] || undefined;
+  const eventTime = details["event time"] || undefined;
+  const location = details["location"] || undefined;
+  const partySizeText = details["party size"] || undefined;
+  const partySize = partySizeText
+    ? Number.parseInt(partySizeText.replace(/[^0-9]/g, ""), 10) || undefined
+    : undefined;
+  const addOns = details["add-ons"]
+    ? details["add-ons"]
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : undefined;
+
+  const primaryNote = note || (row.message?.trim()?.length ? row.message : "");
+  const createdIso = safeIso(row.createdAt) ?? new Date().toISOString();
+  const noteEntry = primaryNote
+    ? [
+        {
+          id: `msg-${row.id}`,
+          text: primaryNote,
+          at: createdIso,
+        },
+      ]
+    : [];
+
+  const intake: Record<string, any> = {
+    capturedAt: createdIso,
+  };
+  if (serviceLabel) intake.service = serviceLabel;
+  if (eventTime) intake.eventTime = eventTime;
+  if (location) intake.location = location;
+  if (typeof partySize === "number") intake.partySize = partySize;
+  if (addOns) intake.addOns = addOns;
+  if (primaryNote) intake.initialMessage = primaryNote;
 
   return {
     id: row.id,
     name: row.name || "New inquiry",
-    email: row.email && row.email !== emailPlaceholder ? row.email : undefined,
+    email: row.email && row.email !== EMAIL_PLACEHOLDER ? row.email : undefined,
     phone: row.phone || undefined,
     stage: "uncontacted",
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    dateOfService: eventDateIso,
+    createdAt: createdIso,
+    dateOfService: eventDateIso ?? preferredDateIso,
+    eventTime,
+    location,
+    partySize,
+    eventType: serviceLabel,
     tags: row.source ? [row.source] : [],
-    notes: row.message
-      ? [
-          {
-            id: `msg-${row.id}`,
-            text: row.message,
-            at:
-              row.createdAt instanceof Date
-                ? row.createdAt.toISOString()
-                : (row.createdAt as string),
-          },
-        ]
-      : [],
+    notes: noteEntry,
+    intake,
+    addOns,
     source: row.source ?? undefined,
   } as Lead & Record<string, any>;
 };
 
 type ViewMode = "calendar" | "leads" | "contracts" | "invoices" | "content";
 type SortMode = "alpha" | "bookingType" | "contacted" | "completed" | "upcoming" | "repeat";
+type TimeframeKey = "today" | "tomorrow" | "week";
+
+const TIMEFRAME_OPTIONS: { value: TimeframeKey; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "tomorrow", label: "Tomorrow" },
+  { value: "week", label: "This Week" },
+];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 export default function AdminDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -145,6 +212,7 @@ export default function AdminDashboard() {
   // New lead modal
   const [newOpen, setNewOpen] = useState(false);
   const [newDate, setNewDate] = useState<Date | null>(null);
+  const [timeframe, setTimeframe] = useState<TimeframeKey>("today");
 
   // Lead details modal
   const [leadOpen, setLeadOpen] = useState(false);
@@ -276,6 +344,92 @@ export default function AdminDashboard() {
     return arr;
   }, [leads, search, sort]);
 
+  const timeframeConfig = useMemo(() => {
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    switch (timeframe) {
+      case "today": {
+        const start = todayStart;
+        return {
+          start,
+          end: new Date(start.getTime() + DAY_MS),
+          label: "Today",
+          focusDate: start,
+          viewMode: "today" as const,
+        };
+      }
+      case "tomorrow": {
+        const start = new Date(todayStart.getTime() + DAY_MS);
+        return {
+          start,
+          end: new Date(start.getTime() + DAY_MS),
+          label: "Tomorrow",
+          focusDate: start,
+          viewMode: "today" as const,
+        };
+      }
+      case "week": {
+        const start = todayStart;
+        return {
+          start,
+          end: new Date(start.getTime() + 7 * DAY_MS),
+          label: "This Week",
+          focusDate: start,
+          viewMode: "month" as const,
+        };
+      }
+      default: {
+        const start = todayStart;
+        return {
+          start,
+          end: new Date(start.getTime() + DAY_MS),
+          label: "Today",
+          focusDate: start,
+          viewMode: "today" as const,
+        };
+      }
+    }
+  }, [timeframe]);
+
+  const filteredEvents = useMemo(() => {
+    const startMs = timeframeConfig.start.getTime();
+    const endMs = timeframeConfig.end.getTime();
+    return (events ?? []).filter((event) => {
+      const value = event?.start ?? (event as any)?.dateISO ?? (event as any)?.startAt;
+      if (!value) return false;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return false;
+      const ms = date.getTime();
+      return ms >= startMs && ms < endMs;
+    });
+  }, [events, timeframeConfig]);
+
+  const filteredSales = useMemo(() => {
+    const startMs = timeframeConfig.start.getTime();
+    const endMs = timeframeConfig.end.getTime();
+    return (sales ?? []).filter((sale) => {
+      const value = sale?.createdAt;
+      if (!value) return false;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return false;
+      const ms = date.getTime();
+      return ms >= startMs && ms < endMs;
+    });
+  }, [sales, timeframeConfig]);
+
+  const filteredLeadsForKPI = useMemo(() => {
+    const startMs = timeframeConfig.start.getTime();
+    const endMs = timeframeConfig.end.getTime();
+    return leads.filter((lead) => {
+      const value = lead?.dateOfService ?? lead?.createdAt;
+      if (!value) return false;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return false;
+      const ms = date.getTime();
+      return ms >= startMs && ms < endMs;
+    });
+  }, [leads, timeframeConfig]);
+
   return (
     <div className="crm-shell section-y">
       <div className="grid grid-cols-12 gap-3">
@@ -328,23 +482,49 @@ export default function AdminDashboard() {
           </div>
 
           <div className="wglass panel">
-            <KPIStrip events={events} sales={sales} leads={leads} />
+            <KPIStrip
+              events={filteredEvents}
+              sales={filteredSales}
+              leads={filteredLeadsForKPI}
+              timeframeLabel={timeframeConfig.label}
+            />
           </div>
 
-          <div className="wglass panel flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
-              <button
-                className={`h-9 rounded-xl px-3 text-sm border ${view === "calendar" ? "bg-primary/15 border-border/70" : "border-border/60 hover:bg-accent/20"}`}
-                onClick={() => setView("calendar")}
-              >
-                Calendar
-              </button>
-              <button
-                className={`h-9 rounded-xl px-3 text-sm border ${view === "leads" ? "bg-primary/15 border-border/70" : "border-border/60 hover:bg-accent/20"}`}
-                onClick={() => setView("leads")}
-              >
-                Leads
-              </button>
+          <div className="wglass panel flex flex-wrap items-center gap-2">
+            <div className="mr-auto flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  className={`h-9 rounded-xl px-3 text-sm border ${view === "calendar" ? "bg-primary/15 border-border/70" : "border-border/60 hover:bg-accent/20"}`}
+                  onClick={() => setView("calendar")}
+                >
+                  Calendar
+                </button>
+                <button
+                  className={`h-9 rounded-xl px-3 text-sm border ${view === "leads" ? "bg-primary/15 border-border/70" : "border-border/60 hover:bg-accent/20"}`}
+                  onClick={() => setView("leads")}
+                >
+                  Leads
+                </button>
+              </div>
+
+              {view === "calendar" && (
+                <div className="flex flex-wrap items-center gap-1">
+                  {TIMEFRAME_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setTimeframe(option.value)}
+                      className={[
+                        "h-9 rounded-xl px-3 text-sm border transition",
+                        timeframe === option.value
+                          ? "bg-primary/15 border-border/70"
+                          : "border-border/60 hover:bg-accent/20",
+                      ].join(" ")}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {view === "leads" && (
@@ -388,8 +568,12 @@ export default function AdminDashboard() {
           {view === "calendar" && (
             <div className="wglass panel-lg">
               <CalendarIOS
-                events={events}
+                events={filteredEvents}
                 leads={leads}
+                focusDate={timeframeConfig.focusDate}
+                viewMode={timeframeConfig.viewMode}
+                rangeLabel={timeframeConfig.label}
+                onRequestTimeframeChange={setTimeframe}
                 onEventOpen={(e) => {
                   if (e.leadId) {
                     const found = leads.find(l => l.id === e.leadId);

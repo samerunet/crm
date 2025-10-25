@@ -54,6 +54,7 @@ function monthLabel(d: Date) {
 }
 
 type StatusCategory = "new" | "pending" | "booked" | "other";
+type RangeShortcut = "today" | "tomorrow" | "week";
 
 const CATEGORY_COLORS: Record<StatusCategory, string> = {
   new: "#ef4444",
@@ -134,14 +135,44 @@ type Props = {
   onEventOpen?: (e: Appointment) => void;
   /** Optional: called when user clicks “+ New” with the currently selected date */
   onDayCreate?: (date: Date) => void;
+  focusDate?: Date | null;
+  viewMode?: "month" | "today";
+  rangeLabel?: string;
+  onRequestTimeframeChange?: (key: RangeShortcut) => void;
 };
 
-export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }: Props) {
-  const today = new Date();
-  const [cursor, setCursor] = useState<Date>(startOfMonth(today));
-  const [mode, setMode] = useState<"month" | "today">("month");
-  const [selectedKey, setSelectedKey] = useState<string | null>(ymd(today));
+export default function CalendarIOS({
+  events,
+  leads,
+  onEventOpen,
+  onDayCreate,
+  focusDate,
+  viewMode,
+  rangeLabel,
+  onRequestTimeframeChange,
+}: Props) {
+  const realToday = new Date();
+  const initialFocus = focusDate ?? realToday;
+  const [cursor, setCursor] = useState<Date>(startOfMonth(initialFocus));
+  const [mode, setMode] = useState<"month" | "today">(viewMode ?? "month");
+  const [selectedKey, setSelectedKey] = useState<string | null>(ymd(initialFocus));
   const [modalKey, setModalKey] = useState<string | null>(null);
+  const focusKey = focusDate ? ymd(focusDate) : null;
+
+  useEffect(() => {
+    if (!focusDate) return;
+    setSelectedKey(ymd(focusDate));
+    setCursor(startOfMonth(focusDate));
+  }, [focusKey]);
+
+  useEffect(() => {
+    if (!viewMode) return;
+    setMode(viewMode);
+  }, [viewMode]);
+
+  const anchorDate = focusDate ?? realToday;
+  const anchorKey = ymd(anchorDate);
+  const listLabel = rangeLabel ?? "Today";
 
   const leadById = useMemo(() => {
     const map = new Map<string, Lead>();
@@ -226,13 +257,13 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
     return cells;
   }, [cursor]);
 
-  /** Today list (filtered) */
-  const todayList = useMemo(() => {
+  /** Focus-day list (filtered) */
+  const focusList = useMemo(() => {
     return richEvents.filter((rich) => {
       const d = rich.start;
-      return d ? sameDay(d, today) : false;
+      return d ? sameDay(d, anchorDate) : false;
     });
-  }, [richEvents, today]);
+  }, [richEvents, anchorKey]);
 
   return (
     <>
@@ -260,10 +291,11 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
           <button
             className="ml-2 h-9 rounded-xl border border-border/70 px-3 text-sm hover:bg-accent/20"
             onClick={() => {
-              const m = startOfMonth(today);
+              const m = startOfMonth(realToday);
               setCursor(m);
-              setMode("month");
-              setSelectedKey(ymd(today));
+              setSelectedKey(ymd(realToday));
+              setMode("today");
+              onRequestTimeframeChange?.("today");
             }}
           >
             Today
@@ -278,7 +310,9 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                 ? "bg-primary/15 border-border/70"
                 : "border-border/60 hover:bg-accent/20"
             }`}
-            onClick={() => setMode("month")}
+            onClick={() => {
+              setMode("month");
+            }}
           >
             Month
           </button>
@@ -288,7 +322,10 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                 ? "bg-primary/15 border-border/70"
                 : "border-border/60 hover:bg-accent/20"
             }`}
-            onClick={() => setMode("today")}
+            onClick={() => {
+              setMode("today");
+              onRequestTimeframeChange?.("today");
+            }}
           >
             Today
           </button>
@@ -298,11 +335,11 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
       {/* MAIN */}
       {mode === "today" ? (
         <div className="glass mt-3 rounded-2xl p-3">
-          {todayList.length === 0 ? (
-            <div className="text-sm text-muted-foreground p-3">No bookings today.</div>
+          {focusList.length === 0 ? (
+            <div className="text-sm text-muted-foreground p-3">No bookings for {listLabel.toLowerCase()}.</div>
           ) : (
             <ul className="divide-y glass-sep">
-              {todayList.map((rich) => {
+              {focusList.map((rich) => {
                 const start = rich.start;
                 const end = rich.end;
                 const event = rich.event;
@@ -353,7 +390,8 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                 const key = ymd(d);
                 const items = eventsByDay.get(key) ?? [];
                 const isSel = selectedKey === key;
-                const isTodayCell = sameDay(d, today);
+                const isFocusCell = sameDay(d, anchorDate);
+                const isTodayCell = sameDay(d, realToday);
                 const categories = new Set(items.map((item) => item.category));
                 let dayStyle: React.CSSProperties | undefined;
                 if (items.length === 0) {
@@ -393,7 +431,7 @@ export default function CalendarIOS({ events, leads, onEventOpen, onDayCreate }:
                       "transition hover:bg-accent/10",
                       inMonth ? "bg-background/30" : "bg-background/10 opacity-75",
                       isSel ? "ring-2 ring-[--ring]" : "",
-                      isTodayCell ? "border-[var(--gold)]" : "border-border/60",
+                      isFocusCell || isTodayCell ? "border-[var(--gold)]" : "border-border/60",
                     ].join(" ")}
                     style={dayStyle}
                   >
