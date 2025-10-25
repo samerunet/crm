@@ -6,9 +6,9 @@ import BookingBanner from '@/components/sections/booking-banner';
 
 const PHOTOS = [
   { label: 'Bridal Makeup', img: '/portfolio/IMG_5347.JPG' },
-  { label: 'Editorial / Fashion', img: '/portfolio/IMG_9791.JPG' },
-  { label: 'Destination Wedding', img: '/portfolio/IMG_3547.JPG' },
-  { label: 'Studio Appointment', img: '/portfolio/IMG_3750.JPG' },
+  { label: 'Editorial / Fashion', img: '/portfolio/IMG_9791.jpg' },
+  { label: 'Destination Wedding', img: '/portfolio/IMG_3547.jpg' },
+  { label: 'Studio Appointment', img: '/portfolio/IMG_3750.jpg' },
 ];
 
 // Tiny warm unify tint (≈6%). Tweak alpha 0.04–0.08 to taste.
