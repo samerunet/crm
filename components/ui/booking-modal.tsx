@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 
 export type Service = { id: string; title: string } | undefined;
-export type AddOn = { id: string; label: string; price?: string };
 
 const SERVICE_OPTIONS = [
   'Bridal Makeup',
@@ -18,38 +17,49 @@ const SERVICE_OPTIONS = [
 
 type ServiceOption = (typeof SERVICE_OPTIONS)[number];
 
+const LOCATION_OPTIONS = [
+  'Studio Appointment', // default
+  'On-site / Mobile',
+  'Venue / Hotel',
+  'Other (enter address)',
+] as const;
+
 export default function BookingModal({
   open,
   onClose,
   service,
-  addOns = [],
 }: {
   open: boolean;
   onClose: () => void;
   service?: Service;
-  addOns?: AddOn[];
 }) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  // form state
+  // ---------- form state ----------
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+
   const [serviceSelect, setServiceSelect] = useState<ServiceOption | ''>('');
   const [otherService, setOtherService] = useState('');
 
-  const [date, setDate] = useState('');
-  const [eventTime, setEventTime] = useState(''); // hour-only text (e.g., "6:00 AM")
+  const [date, setDate] = useState(''); // YYYY-MM-DD
+  const [eventTime, setEventTime] = useState(''); // e.g., "6:00 AM"
+
   const [partySize, setPartySize] = useState<number>(1);
-  const [location, setLocation] = useState('');
-  const [selAddOns, setSelAddOns] = useState<string[]>([]);
+
+  // Location as dropdown (default: Studio Appointment)
+  const [locationChoice, setLocationChoice] =
+    useState<(typeof LOCATION_OPTIONS)[number]>('Studio Appointment');
+  const [locationCustom, setLocationCustom] = useState('');
+
   const [notes, setNotes] = useState('');
 
-  // ux
+  // UX
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<null | { ok: boolean; message: string }>(null);
 
-  // lifecycles
+  // ---------- lifecycles ----------
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -61,7 +71,7 @@ export default function BookingModal({
     if (open) setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open]);
 
-  // prefill from opener
+  // prefill from opener (if “Book” clicked on a service)
   useEffect(() => {
     if (!open || !service?.title) return;
     const title = service.title.trim();
@@ -77,7 +87,7 @@ export default function BookingModal({
     }
   }, [open, service?.title]);
 
-  // bounds
+  // ---------- bounds ----------
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const maxDateISO = useMemo(() => {
     const d = new Date();
@@ -85,7 +95,7 @@ export default function BookingModal({
     return d.toISOString().slice(0, 10);
   }, []);
 
-  // hour-only dropdown labels (5 AM – 7 PM)
+  // hour-only dropdown (5 AM – 7 PM)
   const TIME_LABELS = useMemo(() => {
     const labels: string[] = [];
     for (let h = 5; h <= 19; h++) {
@@ -96,16 +106,13 @@ export default function BookingModal({
     return labels;
   }, []);
 
-  // quick helpers
+  // ---------- helpers ----------
   const chosenServiceTitle =
     (serviceSelect === 'Other' ? otherService.trim() : serviceSelect) || '';
-  function toggleAddOn(id: string) {
-    setSelAddOns((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
-  }
-  // hide any airbrush add-ons
-  const filteredAddOns = useMemo(() => addOns.filter((a) => !/airbrush/i.test(a.label)), [addOns]);
 
-  // ---------- validation tuned for speed ----------
+  const locationString =
+    locationChoice === 'Other (enter address)' ? locationCustom.trim() || 'Other' : locationChoice;
+
   function hasContact() {
     return !!(phone.trim() || email.trim());
   }
@@ -119,13 +126,6 @@ export default function BookingModal({
     return null;
   }
 
-  function softErrors(): string[] {
-    const errs: string[] = [];
-    if (date && (date < todayISO || date > maxDateISO)) errs.push('date');
-    if (!(partySize >= 1 && partySize <= 15)) errs.push('party');
-    return errs;
-  }
-
   const smsBody = useMemo(() => {
     const lines = [
       'Booking Inquiry',
@@ -135,33 +135,22 @@ export default function BookingModal({
       chosenServiceTitle ? `Service: ${chosenServiceTitle}` : '',
       date ? `Date: ${date}` : '',
       eventTime ? `Time: ${eventTime}` : '',
-      location ? `Location: ${location}` : '',
+      locationString ? `Location: ${locationString}` : '',
       partySize ? `Party Size: ${partySize}` : '',
-      selAddOns.length ? `Add-ons: ${selAddOns.join(', ')}` : '',
       notes ? `Notes: ${notes}` : '',
     ].filter(Boolean);
     return encodeURIComponent(lines.join('\n'));
-  }, [
-    name,
-    email,
-    phone,
-    chosenServiceTitle,
-    date,
-    eventTime,
-    location,
-    partySize,
-    selAddOns,
-    notes,
-  ]);
+  }, [name, email, phone, chosenServiceTitle, date, eventTime, locationString, partySize, notes]);
 
   async function submit() {
+    // Fallback message for CRMs that expect a message body
     const fallbackMessage =
       notes.trim() ||
       [
         `Quick booking for ${chosenServiceTitle || 'Service'}`,
         date && `on ${date}`,
         eventTime && `at ${eventTime}`,
-        location && `in ${location}`,
+        locationString && `in ${locationString}`,
         `party ${partySize}`,
       ]
         .filter(Boolean)
@@ -172,49 +161,60 @@ export default function BookingModal({
       if (id) document.getElementById(id)?.focus();
       return;
     }
-    if (softErrors().length) return;
 
     setSubmitting(true);
     setResult(null);
+
     try {
+      // Build payload to align with your Lead schema
+      // NOTE: We send *both* `eventDate` and `date` for compatibility.
+      const payload = {
+        name: name.trim(), // Lead.name (String?) — we send it
+        email: email.trim() || undefined, // Lead.email (String? in updated schema)
+        phone: phone.trim() || undefined, // Lead.phone (String?)
+        service: chosenServiceTitle || undefined, // Lead.service (String?)
+        eventDate: date || undefined, // Lead.eventDate (DateTime?) — server can parse
+        date: date || undefined, // compat if your handler still maps `date` -> eventDate
+        time: eventTime.trim() || undefined, // Lead.time (String?)
+        partySize: Number.isFinite(partySize) ? partySize : 1, // Lead.partySize (Int?)
+        location: locationString || undefined, // Lead.location (String?)
+        addOns: [], // Lead.addOns (Json?) — keep array for older handlers
+        notes: notes.trim() || undefined, // Lead.notes (String?)
+        message: fallbackMessage, // Lead.message (String?)
+        source: 'website', // Lead.source (String?)
+      };
+
       const res = await fetch('/api/contact', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-          service: chosenServiceTitle || undefined,
-          date: date || undefined,
-          location: location.trim() || undefined,
-          time: eventTime.trim() || undefined,
-          partySize,
-          addOns: selAddOns,
-          notes: notes.trim() || undefined,
-          message: fallbackMessage,
-        }),
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json?.ok) throw new Error(json?.error || 'Send failed');
-      setResult({ ok: true, message: "Sent! We'll get back to you shortly." });
+
+      // Show real backend error text if not JSON
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { ok: res.ok, message: text || (res.ok ? 'OK' : 'Failed') };
+      }
+
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+      }
+
+      setResult({ ok: true, message: data?.message || "Sent! We'll get back to you shortly." });
       setTimeout(onClose, 900);
     } catch (err: any) {
+      console.error('Booking submit error:', err);
       setResult({ ok: false, message: err?.message || 'Send failed' });
     } finally {
       setSubmitting(false);
     }
-  }
-
-  // quick date helpers
-  function setDateTo(offsetDays: number) {
-    const d = new Date();
-    d.setDate(d.getDate() + offsetDays);
-    setDate(d.toISOString().slice(0, 10));
-  }
-  function setNextWeekend(dayIndex: 6 | 0) {
-    const now = new Date();
-    const diff = (dayIndex - now.getDay() + 7) % 7 || 7;
-    setDateTo(diff);
   }
 
   if (!open) return null;
@@ -263,85 +263,47 @@ export default function BookingModal({
           </button>
         </div>
 
-        {/* Single-screen form */}
+        {/* Form (boxes are ~5 shades lighter now) */}
         <div className="relative z-10 mt-3 max-h-[62vh] overflow-y-auto px-4 pb-28 sm:px-6 sm:pb-24">
           {/* REQUIRED */}
           <div className="mb-2 text-[11px] tracking-wide text-white/60 uppercase">Required</div>
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FloatingInput
-              id="field-name"
-              label="Name *"
-              value={name}
-              onChange={setName}
-              name="name"
-              autoComplete="name"
-              inputMode="text"
-              enterKeyHint="next"
-              required
-            />
-            <FloatingInput
-              id="field-phone"
-              label="Phone"
-              value={phone}
-              onChange={setPhone}
-              type="tel"
-              name="tel"
-              autoComplete="tel"
-              inputMode="tel"
-              enterKeyHint="next"
-            />
-            <FloatingInput
-              id="field-email"
-              label="Email"
-              value={email}
-              onChange={setEmail}
-              type="email"
-              name="email"
-              autoComplete="email"
-              inputMode="email"
-              enterKeyHint="next"
-            />
+          <section className="rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FloatingInput
+                id="field-name"
+                label="Name *"
+                value={name}
+                onChange={setName}
+                name="name"
+                autoComplete="name"
+                inputMode="text"
+                enterKeyHint="next"
+                required
+              />
+              <FloatingInput
+                id="field-phone"
+                label="Phone"
+                value={phone}
+                onChange={setPhone}
+                type="tel"
+                name="tel"
+                autoComplete="tel"
+                inputMode="tel"
+                enterKeyHint="next"
+              />
+              <FloatingInput
+                id="field-email"
+                label="Email"
+                value={email}
+                onChange={setEmail}
+                type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
+                enterKeyHint="next"
+              />
 
-            {/* Service quick chips */}
-            <div className="sm:col-span-2">
-              <div className="flex flex-wrap gap-2">
-                {(SERVICE_OPTIONS as readonly string[])
-                  .filter((s) => s !== 'Other') // no airbrush in options; "Other" still available
-                  .map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => {
-                        setServiceSelect(s as ServiceOption);
-                        setOtherService('');
-                      }}
-                      className={clsx(
-                        'rounded-full border px-3 py-1.5 text-sm',
-                        serviceSelect === s
-                          ? 'border-white/30 bg-white/15 text-white'
-                          : 'border-white/12 text-white/80 hover:bg-white/10',
-                      )}
-                      aria-pressed={serviceSelect === s}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                <button
-                  type="button"
-                  onClick={() => setServiceSelect('Other')}
-                  className={clsx(
-                    'rounded-full border px-3 py-1.5 text-sm',
-                    serviceSelect === 'Other'
-                      ? 'border-white/30 bg-white/15 text-white'
-                      : 'border-white/12 text-white/80 hover:bg-white/10',
-                  )}
-                  aria-pressed={serviceSelect === 'Other'}
-                >
-                  Other
-                </button>
-              </div>
-
-              <div className="mt-3">
+              <div className="sm:col-span-2">
                 <FloatingSelect
                   id="field-service"
                   label="Service *"
@@ -353,136 +315,93 @@ export default function BookingModal({
                   options={SERVICE_OPTIONS}
                   required
                 />
+                {serviceSelect === 'Other' && (
+                  <div className="mt-3">
+                    <FloatingInput
+                      id="field-otherService"
+                      label="Describe the service *"
+                      value={otherService}
+                      onChange={setOtherService}
+                      name="service-other"
+                      autoComplete="on"
+                      enterKeyHint="next"
+                      required
+                    />
+                  </div>
+                )}
               </div>
-
-              {serviceSelect === 'Other' && (
-                <div className="mt-3">
-                  <FloatingInput
-                    id="field-otherService"
-                    label="Describe the service *"
-                    value={otherService}
-                    onChange={setOtherService}
-                    name="service-other"
-                    autoComplete="on"
-                    enterKeyHint="next"
-                    required
-                  />
-                </div>
-              )}
             </div>
           </section>
 
-          {/* RECOMMENDED */}
+          {/* RECOMMENDED 1: Date & Time */}
           <div className="mt-6 mb-2 text-[11px] tracking-wide text-white/60 uppercase">
             Recommended
           </div>
-          <section className="grid gap-4">
-            {/* Date + hour dropdown */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="field-date" className="text-sm text-white/80">
-                    Preferred date
-                  </label>
-                  <div className="flex gap-1.5">
-                    <QuickChip onClick={() => setDateTo(0)}>Today</QuickChip>
-                    <QuickChip onClick={() => setDateTo(1)}>Tomorrow</QuickChip>
-                    <QuickChip onClick={() => setNextWeekend(6)}>Sat</QuickChip>
-                    <QuickChip onClick={() => setNextWeekend(0)}>Sun</QuickChip>
-                  </div>
-                </div>
-                <FloatingInput
-                  id="field-date"
-                  label="Preferred date"
-                  value={date}
-                  onChange={setDate}
-                  type="date"
-                  name="event-date"
-                  min={todayISO}
-                  max={maxDateISO}
-                />
-              </div>
+          <section className="rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FloatingInput
+                id="field-date"
+                label="Preferred date"
+                value={date}
+                onChange={setDate}
+                type="date"
+                name="event-date"
+                min={todayISO}
+                max={maxDateISO}
+              />
+              <FloatingSelect
+                id="field-time"
+                label="Time of the event"
+                value={eventTime}
+                onChange={setEventTime}
+                options={['', ...TIME_LABELS] as unknown as readonly string[]}
+              />
+            </div>
+          </section>
 
+          {/* RECOMMENDED 2: Party size & Location */}
+          <section className="mt-4 rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FloatingSelect
+                id="field-party"
+                label="Party size (1–15)"
+                value={String(partySize)}
+                onChange={(v) =>
+                  setPartySize(Math.max(1, Math.min(15, parseInt(String(v || '1'), 10) || 1)))
+                }
+                options={
+                  Array.from({ length: 15 }, (_, i) =>
+                    String(i + 1),
+                  ) as unknown as readonly string[]
+                }
+              />
               <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="field-time" className="text-sm text-white/80">
-                    Time of the event
-                  </label>
-                </div>
                 <FloatingSelect
-                  id="field-time"
-                  label="Time of the event"
-                  value={eventTime}
-                  onChange={setEventTime}
-                  options={['', ...TIME_LABELS] as unknown as readonly string[]}
+                  id="field-location"
+                  label="Location"
+                  value={locationChoice}
+                  onChange={(v) => setLocationChoice(v as (typeof LOCATION_OPTIONS)[number])}
+                  options={LOCATION_OPTIONS}
                 />
+                {locationChoice === 'Other (enter address)' && (
+                  <div className="mt-3">
+                    <FloatingInput
+                      id="field-location-custom"
+                      label="Enter address"
+                      value={locationCustom}
+                      onChange={setLocationCustom}
+                      name="street-address"
+                      autoComplete="street-address"
+                      inputMode="text"
+                    />
+                  </div>
+                )}
               </div>
             </div>
+          </section>
 
-            {/* Party size + Location */}
-            <div
-              id="field-party"
-              className="rounded-2xl border border-white/12 bg-white/[0.04] p-3"
-            >
-              <div className="flex items-center justify-between">
-                <label className="text-sm text-white/80">Party size (1–15)</label>
-                <span className="text-[11px] text-white/60">Selected: {partySize}</span>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {[1, 2, 3, 4, 5, 6, 8, 10, 12, 15].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setPartySize(n)}
-                    className={clsx(
-                      'h-8 rounded-full border px-3 text-xs',
-                      partySize === n
-                        ? 'border-white/30 bg-white/15 text-white'
-                        : 'border-white/12 text-white/80 hover:bg-white/10',
-                    )}
-                    aria-pressed={partySize === n}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <FloatingInput
-              label="Location"
-              value={location}
-              onChange={setLocation}
-              name="street-address"
-              autoComplete="street-address"
-              inputMode="text"
-            />
-
-            {/* Add-ons (airbrush removed) */}
-            {filteredAddOns.length ? (
-              <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-3">
-                <label className="text-sm text-white/80">Add-ons</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {filteredAddOns.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => toggleAddOn(a.id)}
-                      className={clsx(
-                        'rounded-full border px-3 py-1 text-sm',
-                        selAddOns.includes(a.id)
-                          ? 'border-white/30 bg-white/15 text-white'
-                          : 'border-white/12 text-white/80 hover:bg-white/10',
-                      )}
-                      aria-pressed={selAddOns.includes(a.id)}
-                    >
-                      {a.label}
-                      {a.price ? ` — ${a.price}` : ''}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
+          {/* RECOMMENDED 3: Notes */}
+          <section className="mt-4 rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
             <FloatingTextArea
               id="field-notes"
               label="Notes"
@@ -565,21 +484,7 @@ export default function BookingModal({
   );
 }
 
-/* ---------- primitives ---------- */
-
-function QuickChip(props: React.HTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      {...props}
-      className={clsx(
-        'h-7 rounded-full border px-2.5 text-xs text-white/80',
-        'border-white/12 hover:bg-white/10',
-        props.className,
-      )}
-    />
-  );
-}
+/* ---------- inputs ---------- */
 
 function FloatingInput({
   id,
@@ -728,8 +633,8 @@ function FloatingSelect({
 }: {
   id?: string;
   label: string;
-  value: string;
-  onChange: (v: string) => void;
+  value: any; // allow number|string safely
+  onChange: (v: any) => void;
   options: readonly string[];
   required?: boolean;
   error?: string;
@@ -749,9 +654,9 @@ function FloatingSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        {/* allow empty for optional selects like time */}
+        {/* Allow empty for optional selects (e.g., time) */}
         <option value="" hidden={required}>
-          Select a service
+          {id === 'field-service' ? 'Select a service' : ''}
         </option>
         {options.map((opt) => (
           <option key={opt} value={opt}>
