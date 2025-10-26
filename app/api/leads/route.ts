@@ -12,6 +12,7 @@ type LeadRecord = {
   message: string | null;
   source: string | null;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 const EMAIL_PLACEHOLDER = 'no-email@placeholder.invalid';
@@ -35,6 +36,7 @@ const demoLeads: LeadRecord[] = [
     message: 'Looking for soft glam for wedding morning.',
     source: 'demo',
     createdAt: new Date(demoNow),
+    updatedAt: new Date(demoNow),
   },
   {
     id: 'demo-lead-2',
@@ -45,6 +47,7 @@ const demoLeads: LeadRecord[] = [
     message: 'Bridal party of 6 — need onsite team.',
     source: 'demo',
     createdAt: new Date(demoNow - 4 * 60 * 60 * 1000),
+    updatedAt: new Date(demoNow - 4 * 60 * 60 * 1000),
   },
   {
     id: 'demo-lead-3',
@@ -55,6 +58,7 @@ const demoLeads: LeadRecord[] = [
     message: 'Post-wedding photoshoot touch-up.',
     source: 'demo',
     createdAt: new Date(demoNow - 2 * 24 * 60 * 60 * 1000),
+    updatedAt: new Date(demoNow - 2 * 24 * 60 * 60 * 1000),
   },
 ];
 
@@ -104,6 +108,7 @@ export async function POST(req: Request) {
         source,
         eventDate,
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
       demoLeads.unshift(lead);
       console.warn('POST /api/leads stored lead in demo memory store (DATABASE_URL not set).');
@@ -190,6 +195,7 @@ export async function PATCH(req: Request) {
         message,
         source,
         eventDate,
+        updatedAt: new Date(),
       };
       demoLeads[idx] = updated;
       return NextResponse.json({ ok: true, lead: updated });
