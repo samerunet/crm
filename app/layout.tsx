@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import AppProviders from '@/components/ui/app-providers';
+import AnalyticsEvents from '@/components/ui/analytics-events';
 import Navbar from '@/components/ui/navbar';
 import Footer from '@/components/ui/footer';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -11,15 +12,16 @@ import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 const SITE_URL = new URL('https://farimakeup.com');
-const SITE_TITLE = 'Fari Makeup — Bridal & Luxury Soft Glam in San Diego, OC & LA';
+const SITE_TITLE =
+  'San Diego Makeup Artist — Bridal, Luxury Soft & Full Glam in San Diego, OC & LA';
 const SITE_DESCRIPTION =
   'Luxury bridal and special event makeup artistry serving San Diego, Orange County, and Los Angeles with signature soft glam, perfected skin prep, and on-location service.';
 
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'Fari Makeup',
-  alternateName: 'Fari Makeup — Bridal & Luxury Soft Glam',
+  name: 'San Diego Makeup ',
+  alternateName: 'San Diego Makeup Artist Fari— Bridal & Luxury Glam',
   url: 'https://farimakeup.com/',
   potentialAction: {
     '@type': 'SearchAction',
@@ -31,13 +33,10 @@ const websiteSchema = {
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Fari Makeup',
+  name: 'San Diego Makeup Artist Fari',
   url: 'https://farimakeup.com/',
   logo: 'https://farimakeup.com/logo.png',
-  sameAs: [
-    'https://www.instagram.com/fari_makeup',
-    'https://www.pinterest.com/farimakeup',
-  ],
+  sameAs: ['https://www.instagram.com/fari_makeup', 'https://www.pinterest.com/farimakeup'],
 };
 
 export const metadata: Metadata = {
@@ -50,26 +49,145 @@ export const metadata: Metadata = {
       'en-US': 'https://farimakeup.com',
     },
   },
-  applicationName: 'Fari Makeup',
+  applicationName: 'San Diego Makeup Artist Fari',
   authors: [{ name: 'Fari Makeup' }],
   creator: 'Fari Makeup',
   publisher: 'Fari Makeup',
   keywords: [
+    // Brand
     'Fari Makeup',
     'Fariia Makeup',
+    'Fari Makeup Artistry',
+    'Fari Makeup Studio',
+    'Fari Makeup San Diego',
+
+    // Core services (kept + expanded)
     'bridal makeup',
+    'wedding makeup artist',
     'soft glam',
     'natural makeup',
     'luxury makeup',
-    'wedding makeup artist',
+    'Full Glam',
+    'event makeup',
+    'photoshoot makeup',
+    'engagement makeup',
+    'maternity photoshoot makeup',
+    'prom makeup',
+    'homecoming makeup',
+    'quinceañera makeup',
+    'makeup for mature skin',
+    'makeup for tan skin',
+    'airbrush makeup',
+    'HD makeup',
+    'dewy makeup',
+    'matte makeup',
+    'editorial makeup',
+    'red carpet makeup',
+    'makeup trial',
+    'bridal makeup trial',
+    'lashes included',
+    'false lashes application',
+    'brow shaping',
+    'contour and highlight',
+    'makeup lessons',
+    'one-on-one makeup lesson',
+    'group makeup class',
+    'mobile makeup artist',
+    'on-site makeup artist',
+    'luxury bridal makeup',
+    'natural bridal makeup',
+    'soft glam bridal makeup',
+    'bridal hair and makeup',
+    'wedding hair and makeup',
+    'hairstyling',
+    'updo hairstyling',
+    'hollywood waves',
+
+    // Specialty & cultural
+    'South Asian bridal makeup',
+    'Indian bridal makeup',
+    'Pakistani bridal makeup',
+    'Persian bridal makeup',
+    'Afghan bridal makeup',
+    'Arabic bridal makeup',
+    'Armenian bridal makeup',
+    'Middle Eastern glam',
+    'hijab-friendly makeup artist',
+
+    // Commercial/intent queries
+    'bridal makeup near me',
+    'makeup artist near me',
+    'best makeup artist San Diego',
+    'top rated makeup artist San Diego',
+    'affordable bridal makeup San Diego',
+    'luxury bridal makeup San Diego',
+    'wedding makeup packages',
+    'bridal makeup packages',
+    'wedding makeup price',
+    'wedding makeup cost',
+    'book wedding makeup artist',
+    'same day makeup artist',
+    'last minute wedding makeup',
+
+    // Location hubs (kept + expanded)
     'San Diego',
+    'makeup artist San Diego',
+    'San Diego makeup artist',
+    'bridal makeup San Diego',
+    'wedding makeup San Diego',
+    'mobile makeup San Diego',
+    'La Jolla makeup artist',
+    'Del Mar makeup artist',
+    'Coronado makeup artist',
+    'Chula Vista makeup artist',
+    'Escondido makeup artist',
+    'Carlsbad makeup artist',
+    'Oceanside makeup artist',
+    'Temecula makeup artist',
+
     'Orange County',
+    'makeup artist Orange County',
+    'bridal makeup Orange County',
+    'Irvine makeup artist',
+    'Newport Beach makeup artist',
+    'Costa Mesa makeup artist',
+    'Anaheim makeup artist',
+    'Laguna Beach makeup artist',
+    'Huntington Beach makeup artist',
+
     'Los Angeles',
+    'makeup artist Los Angeles',
+    'bridal makeup Los Angeles',
+    'Beverly Hills makeup artist',
+    'West Hollywood makeup artist',
+    'Pasadena makeup artist',
+    'Glendale makeup artist',
+
+    // Use cases / moments
+    'engagement photos makeup',
+    'bridal shower makeup',
+    'bachelorette makeup',
+    'headshot makeup',
+    'brand photoshoot makeup',
+    'micro-wedding makeup',
+    'elopement makeup',
+    'destination wedding makeup',
+
+    // Multilingual (reach local communities)
+    'maquillista San Diego',
+    'maquillista de novias San Diego',
+    'maquillaje para bodas San Diego',
+    'maquillista a domicilio San Diego',
+    'макияж Сан-Диего',
+    'визажист Сан-Диего',
+    'визажист на свадьбу Сан-Диего',
+    'آرایشگر عروس سن دیگو',
   ],
+
   openGraph: {
     type: 'website',
     url: 'https://farimakeup.com',
-    siteName: 'Fari Makeup',
+    siteName: 'San Diego Makeup Artist Fariia',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     images: [
@@ -137,13 +255,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <noscript
           dangerouslySetInnerHTML={{
-            __html: '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-P7CW6ZTN" height="0" width="0" style="display:none;visibility:hidden"></iframe>',
+            __html:
+              '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-P7CW6ZTN" height="0" width="0" style="display:none;visibility:hidden"></iframe>',
           }}
         />
         <AppProviders>
           <Navbar />
           {children}
           <Footer />
+          <AnalyticsEvents />
         </AppProviders>
         <SpeedInsights />
       </body>

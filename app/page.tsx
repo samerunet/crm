@@ -1,9 +1,18 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
 import AboutFari from '@/components/sections/about';
 import SEOJsonLD from '@/components/seo-jsonld';
 import HomeHighlights from './_components/home-highlights';
 import { InstagramIcon } from '@/components/ui/icons';
+
+export const metadata: Metadata = {
+  title:
+    'San Diego Makeup Artist Fari — Luxury, Bridal, Soft & Full Glam Makeup Artist in San Diego',
+  description:
+    'Bridal, glam, and editorial looks that photograph beautifully in natural light and flash. Studio and on-location services across San Diego, Orange County, Los Angeles, and destination events.',
+  alternates: { canonical: '/' },
+};
 
 export default function Page() {
   return (

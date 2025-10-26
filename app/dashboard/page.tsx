@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import ClientDashboard from "./components/ClientDashboard";
+
+export const metadata: Metadata = {
+  title: "Client Dashboard — Fari Makeup",
+  description: "Access your bookings, guides, and client resources.",
+  alternates: { canonical: '/dashboard' },
+};
 
 export default async function DashboardPage() {
   const session = await auth();

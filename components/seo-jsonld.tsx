@@ -99,6 +99,36 @@ export default function SEOJsonLD({ canonical = 'https://farimakeup.com' }: { ca
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(person) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'LocalBusiness',
+            name: 'Fari Makeup',
+            url: canonical,
+            image: `${canonical}/og.jpg`,
+            telephone: '+1-619-399-6160',
+            priceRange: '$$',
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: 'San Diego',
+              addressRegion: 'CA',
+              addressCountry: 'US',
+            },
+            areaServed: [
+              { '@type': 'City', name: 'San Diego' },
+              { '@type': 'City', name: 'Orange County' },
+              { '@type': 'City', name: 'Los Angeles' },
+            ],
+            sameAs: [
+              'https://www.instagram.com/fari_makeup/',
+              'https://www.pinterest.com/fari_makeup/',
+              'https://www.tiktok.com/@fari_makeup',
+            ],
+          }),
+        }}
+      />
     </>
   );
 }

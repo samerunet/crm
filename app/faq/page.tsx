@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: 'Makeup Recommendations for a Timeless Bridal Look',
     description:
       'Pro tips for camera-ready, soft-glam bridal makeup: skincare prep, long-wear products, timeline planning and touch-up kits.',
-    url: 'https://crm-sable-iota.vercel.app/faq',
+    url: 'https://farimakeup.com/faq',
   },
   twitter: {
     title: 'Makeup Recommendations for a Timeless Bridal Look',

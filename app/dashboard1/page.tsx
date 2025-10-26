@@ -1,6 +1,13 @@
 // app/dashboard/page.tsx
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Client Dashboard (Legacy) — Fari Makeup",
+  description: "Legacy dashboard experience for managing bookings and resources.",
+  alternates: { canonical: '/dashboard1' },
+};
 
 export default async function DashboardPage() {
   // Server-side session check
