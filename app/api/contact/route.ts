@@ -142,9 +142,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const resendKey = process.env.RESEND_API_KEY || '';
-  if (!resendKey) return json({ ok: false, error: 'Missing RESEND_API_KEY' }, { status: 400 });
-
-  const resend = new Resend(resendKey);
+  const resend = resendKey ? new Resend(resendKey) : null;
+  if (!resendKey) {
+    console.warn('POST /api/contact: RESEND_API_KEY not set — skipping email send.');
+  }
 
   let body: any;
   try {
@@ -169,8 +170,8 @@ export async function POST(req: NextRequest) {
   const addOns = Array.isArray(body.addOns)
     ? body.addOns
         .filter((item: unknown): item is string => typeof item === 'string')
-        .map((item) => sanitize(item))
-        .filter((item): item is string => !!item)
+        .map((item: string) => sanitize(item))
+        .filter((item: string | undefined): item is string => !!item)
         .slice(0, 10)
     : undefined;
   const source = sanitize(body.source) || 'booking-modal';
@@ -205,36 +206,66 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const { from, to } = getFromTo();
-    const res = await resend.emails.send({
-      from,
-      to: [to],
-      subject: `Website Inquiry — ${topic || service || 'General'}`,
-      reply_to: email || undefined,
-      html: buildHtml({
-        name,
-        email,
-        phone,
-        topic: topic || service,
-        message: combinedMessage || message,
-        service,
-        eventDate: dateStr,
-        location,
-        time,
-        partySize,
-        addOns,
-      }),
-    });
+    let emailId: string | null = null;
+    let emailError: string | null = null;
 
-    if ('error' in res && res.error) {
-      return json({ ok: false, error: res.error?.message || 'Resend send error' }, { status: 502 });
+    if (resend) {
+      try {
+        const { from, to } = getFromTo();
+        const result = await resend.emails.send({
+          from,
+          to: [to],
+          subject: `Website Inquiry — ${topic || service || 'General'}`,
+          reply_to: email || undefined,
+          html: buildHtml({
+            name,
+            email,
+            phone,
+            topic: topic || service,
+            message: combinedMessage || message,
+            service,
+            eventDate: dateStr,
+            location,
+            time,
+            partySize,
+            addOns,
+          }),
+        });
+
+        if ('error' in result && result.error) {
+          emailError = result.error?.message || 'Resend send error';
+        } else {
+          emailId = (result as any).data?.id ?? null;
+        }
+      } catch (err: any) {
+        emailError = err?.message || 'Send failed';
+      }
+    } else {
+      emailError = 'Email service not configured';
     }
 
-    return json({
-      ok: true,
-      id: (res as any).data?.id || null,
-      leadId: lead.id,
-    });
+    if (emailError && resend) {
+      console.error('POST /api/contact email send failed:', emailError);
+    } else if (emailError && !resend) {
+      console.warn('POST /api/contact email skipped:', emailError);
+    }
+
+    const responseStatus = emailError ? 202 : 200;
+    const responseMessage = emailError
+      ? 'Inquiry saved. Email delivery did not complete — please check the email service configuration.'
+      : 'Inquiry received! We will be in touch shortly.';
+
+    return json(
+      {
+        ok: true,
+        id: emailId,
+        leadId: lead.id,
+        emailSent: !emailError,
+        emailError: emailError && resend ? emailError : undefined,
+        message: responseMessage,
+      },
+      { status: responseStatus },
+    );
   } catch (e: any) {
     return json({ ok: false, error: e?.message || 'Send failed' }, { status: 500 });
   }
