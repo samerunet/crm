@@ -6,7 +6,6 @@ import clsx from 'clsx';
 export type Service = { id: string; title: string } | undefined;
 export type AddOn = { id: string; label: string; price?: string };
 
-// Keep in sync with your Services page
 const SERVICE_OPTIONS = [
   'Bridal Makeup',
   'Bridal Party Makeup',
@@ -31,33 +30,26 @@ export default function BookingModal({
   addOns?: AddOn[];
 }) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
-  const stepWrapRef = useRef<HTMLDivElement | null>(null);
-
-  // steps: 0 contact+service, 1 event, 2 options, 3 review
-  const [step, setStep] = useState(0);
 
   // form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-
-  // service selection
   const [serviceSelect, setServiceSelect] = useState<ServiceOption | ''>('');
   const [otherService, setOtherService] = useState('');
 
-  // event
   const [date, setDate] = useState('');
-  const [location, setLocation] = useState('');
+  const [eventTime, setEventTime] = useState(''); // hour-only text (e.g., "6:00 AM")
   const [partySize, setPartySize] = useState<number>(1);
-  const [eventTime, setEventTime] = useState('');
-  const [notes, setNotes] = useState('');
+  const [location, setLocation] = useState('');
   const [selAddOns, setSelAddOns] = useState<string[]>([]);
+  const [notes, setNotes] = useState('');
 
   // ux
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<null | { ok: boolean; message: string }>(null);
 
-  // ===== lifecycles =====
+  // lifecycles
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -65,25 +57,13 @@ export default function BookingModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // focus trap anchor
   useEffect(() => {
     if (open) setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open]);
 
-  // autofocus first field per step
+  // prefill from opener
   useEffect(() => {
-    const wrap = stepWrapRef.current;
-    if (!wrap) return;
-    const el = wrap.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
-      'input:not([readonly]), textarea, select',
-    );
-    el?.focus({ preventScroll: true });
-  }, [step]);
-
-  // init selected service from opener (if passed)
-  useEffect(() => {
-    if (!open) return;
-    if (!service?.title) return;
+    if (!open || !service?.title) return;
     const title = service.title.trim();
     const hit = SERVICE_OPTIONS.find(
       (s) => s !== 'Other' && s.toLowerCase() === title.toLowerCase(),
@@ -97,92 +77,54 @@ export default function BookingModal({
     }
   }, [open, service?.title]);
 
-  // date bounds (today.. +2y)
+  // bounds
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const maxDateISO = useMemo(() => {
     const d = new Date();
-    d.setFullYear(d.getFullYear() + 2); // <= 2 years
+    d.setFullYear(d.getFullYear() + 2);
     return d.toISOString().slice(0, 10);
   }, []);
 
-  // progress
-  const steps = [
-    { key: 'contact', title: 'Your details' },
-    { key: 'event', title: 'Event info' },
-    { key: 'options', title: 'Options' },
-    { key: 'review', title: 'Review & send' },
-  ] as const;
-  const progress = ((step + 1) / steps.length) * 100;
-
-  // ===== validation =====
-  type Errors = Partial<
-    Record<'name' | 'service' | 'otherService' | 'date' | 'partySize' | 'notes', string>
-  >;
-
-  function validateStep(currentStep = step): Errors {
-    const errs: Errors = {};
-    if (currentStep === 0) {
-      if (!name.trim()) errs.name = 'Your name is required.';
-      if (!serviceSelect) errs.service = 'Please pick a service.';
-      if (serviceSelect === 'Other' && !otherService.trim()) {
-        errs.otherService = 'Please describe the service.';
-      }
+  // hour-only dropdown labels (5 AM – 7 PM)
+  const TIME_LABELS = useMemo(() => {
+    const labels: string[] = [];
+    for (let h = 5; h <= 19; h++) {
+      const hour12 = ((h + 11) % 12) + 1;
+      const ampm = h < 12 ? 'AM' : 'PM';
+      labels.push(`${hour12}:00 ${ampm}`);
     }
-    if (currentStep === 1) {
-      // date optional but if present must be within bounds
-      if (date) {
-        if (date < todayISO) errs.date = 'Date cannot be in the past.';
-        if (date > maxDateISO) errs.date = 'Please pick a date within 2 years.';
-      }
-      if (!(partySize >= 1 && partySize <= 15)) {
-        errs.partySize = 'Party size must be between 1 and 15.';
-      }
-      if (!eventTime.trim()) {
-        errs.time = 'Please share the event time.';
-      }
-    }
-    if (currentStep === 2) {
-      // YOU asked: require a message (keep "Notes" label unchanged)
-      if (!notes.trim()) errs.notes = 'Please add a brief message.';
-    }
-    return errs;
-  }
+    return labels;
+  }, []);
 
-  const errors = useMemo(
-    () => validateStep(step),
-    [step, name, serviceSelect, otherService, date, eventTime, partySize, notes],
-  );
-
-  function goNext() {
-    const errs = validateStep(step);
-    if (Object.keys(errs).length) {
-      // scroll to first error in current step
-      const id =
-        (step === 0 &&
-          (errs.name
-            ? 'field-name'
-            : errs.service
-              ? 'field-service'
-              : errs.otherService
-                ? 'field-otherService'
-                : '')) ||
-        (step === 1 && (errs.date ? 'field-date' : errs.time ? 'field-time' : errs.partySize ? 'field-party' : '')) ||
-        (step === 2 && (errs.notes ? 'field-notes' : '')) ||
-        '';
-      if (id) document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    setStep((s) => Math.min(3, s + 1));
-  }
-
-  // helpers
-  const quickParty = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15];
-
+  // quick helpers
+  const chosenServiceTitle =
+    (serviceSelect === 'Other' ? otherService.trim() : serviceSelect) || '';
   function toggleAddOn(id: string) {
     setSelAddOns((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   }
+  // hide any airbrush add-ons
+  const filteredAddOns = useMemo(() => addOns.filter((a) => !/airbrush/i.test(a.label)), [addOns]);
 
-  const chosenServiceTitle = serviceSelect === 'Other' ? otherService.trim() : serviceSelect;
+  // ---------- validation tuned for speed ----------
+  function hasContact() {
+    return !!(phone.trim() || email.trim());
+  }
+  function minValid() {
+    return !!(name.trim() && chosenServiceTitle && hasContact());
+  }
+  function nextMissingFieldId(): string | null {
+    if (!name.trim()) return 'field-name';
+    if (!hasContact()) return phone.trim() ? 'field-email' : 'field-phone';
+    if (!chosenServiceTitle) return 'field-service';
+    return null;
+  }
+
+  function softErrors(): string[] {
+    const errs: string[] = [];
+    if (date && (date < todayISO || date > maxDateISO)) errs.push('date');
+    if (!(partySize >= 1 && partySize <= 15)) errs.push('party');
+    return errs;
+  }
 
   const smsBody = useMemo(() => {
     const lines = [
@@ -192,25 +134,46 @@ export default function BookingModal({
       phone ? `Phone: ${phone}` : '',
       chosenServiceTitle ? `Service: ${chosenServiceTitle}` : '',
       date ? `Date: ${date}` : '',
+      eventTime ? `Time: ${eventTime}` : '',
       location ? `Location: ${location}` : '',
       partySize ? `Party Size: ${partySize}` : '',
-      eventTime ? `Time: ${eventTime}` : '',
       selAddOns.length ? `Add-ons: ${selAddOns.join(', ')}` : '',
       notes ? `Notes: ${notes}` : '',
     ].filter(Boolean);
     return encodeURIComponent(lines.join('\n'));
-  }, [name, email, phone, chosenServiceTitle, date, location, partySize, eventTime, selAddOns, notes]);
+  }, [
+    name,
+    email,
+    phone,
+    chosenServiceTitle,
+    date,
+    eventTime,
+    location,
+    partySize,
+    selAddOns,
+    notes,
+  ]);
 
   async function submit() {
-    // final guard (incl. message/notes)
-    const allErrs = { ...validateStep(0), ...validateStep(1), ...validateStep(2) };
-    if (Object.keys(allErrs).length) {
-      // send the user back to first invalid step
-      if (allErrs.name || allErrs.service || allErrs.otherService) setStep(0);
-      else if (allErrs.date || allErrs.time || allErrs.partySize) setStep(1);
-      else if (allErrs.notes) setStep(2);
+    const fallbackMessage =
+      notes.trim() ||
+      [
+        `Quick booking for ${chosenServiceTitle || 'Service'}`,
+        date && `on ${date}`,
+        eventTime && `at ${eventTime}`,
+        location && `in ${location}`,
+        `party ${partySize}`,
+      ]
+        .filter(Boolean)
+        .join(' • ');
+
+    if (!minValid()) {
+      const id = nextMissingFieldId();
+      if (id) document.getElementById(id)?.focus();
       return;
     }
+    if (softErrors().length) return;
+
     setSubmitting(true);
     setResult(null);
     try {
@@ -227,8 +190,8 @@ export default function BookingModal({
           time: eventTime.trim() || undefined,
           partySize,
           addOns: selAddOns,
-          notes: notes.trim() || undefined, // keep for your records
-          message: notes.trim() || undefined, // map to `message` for server validation
+          notes: notes.trim() || undefined,
+          message: fallbackMessage,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -242,6 +205,18 @@ export default function BookingModal({
     }
   }
 
+  // quick date helpers
+  function setDateTo(offsetDays: number) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    setDate(d.toISOString().slice(0, 10));
+  }
+  function setNextWeekend(dayIndex: 6 | 0) {
+    const now = new Date();
+    const diff = (dayIndex - now.getDay() + 7) % 7 || 7;
+    setDateTo(diff);
+  }
+
   if (!open) return null;
 
   return (
@@ -253,7 +228,6 @@ export default function BookingModal({
         onClick={onClose}
       />
 
-      {/* Bottom Sheet / Modal */}
       <div
         ref={dialogRef}
         role="dialog"
@@ -278,10 +252,7 @@ export default function BookingModal({
 
         {/* Header */}
         <div className="relative z-10 flex items-center justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
-          <div>
-            <h2 className="text-lg leading-tight font-semibold text-white">Booking Request</h2>
-            <p className="text-xs text-white/70">{steps[step].title}</p>
-          </div>
+          <h2 className="text-lg leading-tight font-semibold text-white">Booking Request</h2>
           <button
             onClick={onClose}
             className="inline-grid h-9 w-9 place-items-center rounded-xl border border-white/15 bg-white/5 text-white/90 hover:bg-white/10"
@@ -292,108 +263,134 @@ export default function BookingModal({
           </button>
         </div>
 
-        {/* Progress */}
-        <div className="relative z-10 px-4 sm:px-6">
-          <div className="mt-3 h-[6px] overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${progress}%`,
-                background: 'linear-gradient(90deg, rgba(203,185,164,.9), rgba(156,127,99,.9))',
-              }}
+        {/* Single-screen form */}
+        <div className="relative z-10 mt-3 max-h-[62vh] overflow-y-auto px-4 pb-28 sm:px-6 sm:pb-24">
+          {/* REQUIRED */}
+          <div className="mb-2 text-[11px] tracking-wide text-white/60 uppercase">Required</div>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FloatingInput
+              id="field-name"
+              label="Name *"
+              value={name}
+              onChange={setName}
+              name="name"
+              autoComplete="name"
+              inputMode="text"
+              enterKeyHint="next"
+              required
             />
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {steps.map((s, i) => (
-              <span
-                key={s.key}
-                className={clsx(
-                  'inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] tracking-wide',
-                  i === step ? 'bg-white/15 text-white' : 'border border-white/15 text-white/70',
-                )}
-              >
-                {s.title}
-              </span>
-            ))}
-          </div>
-        </div>
+            <FloatingInput
+              id="field-phone"
+              label="Phone"
+              value={phone}
+              onChange={setPhone}
+              type="tel"
+              name="tel"
+              autoComplete="tel"
+              inputMode="tel"
+              enterKeyHint="next"
+            />
+            <FloatingInput
+              id="field-email"
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              type="email"
+              name="email"
+              autoComplete="email"
+              inputMode="email"
+              enterKeyHint="next"
+            />
 
-        {/* Content */}
-        <div
-          ref={stepWrapRef}
-          className="relative z-10 mt-3 max-h-[58vh] overflow-y-auto px-4 pb-28 sm:max-h-[62vh] sm:px-6 sm:pb-24"
-        >
-          {/* Step 0: Contact + Service */}
-          {step === 0 && (
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FloatingInput
-                id="field-name"
-                label="Name *"
-                value={name}
-                onChange={setName}
-                name="name"
-                autoComplete="name"
-                inputMode="text"
-                enterKeyHint="next"
-                required
-                error={errors.name}
-              />
-              <FloatingInput
-                label="Email"
-                value={email}
-                onChange={setEmail}
-                type="email"
-                name="email"
-                autoComplete="email"
-                inputMode="email"
-                enterKeyHint="next"
-              />
-              <FloatingInput
-                label="Phone"
-                value={phone}
-                onChange={setPhone}
-                type="tel"
-                name="tel"
-                autoComplete="tel"
-                inputMode="tel"
-                enterKeyHint="next"
-              />
+            {/* Service quick chips */}
+            <div className="sm:col-span-2">
+              <div className="flex flex-wrap gap-2">
+                {(SERVICE_OPTIONS as readonly string[])
+                  .filter((s) => s !== 'Other') // no airbrush in options; "Other" still available
+                  .map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setServiceSelect(s as ServiceOption);
+                        setOtherService('');
+                      }}
+                      className={clsx(
+                        'rounded-full border px-3 py-1.5 text-sm',
+                        serviceSelect === s
+                          ? 'border-white/30 bg-white/15 text-white'
+                          : 'border-white/12 text-white/80 hover:bg-white/10',
+                      )}
+                      aria-pressed={serviceSelect === s}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                <button
+                  type="button"
+                  onClick={() => setServiceSelect('Other')}
+                  className={clsx(
+                    'rounded-full border px-3 py-1.5 text-sm',
+                    serviceSelect === 'Other'
+                      ? 'border-white/30 bg-white/15 text-white'
+                      : 'border-white/12 text-white/80 hover:bg-white/10',
+                  )}
+                  aria-pressed={serviceSelect === 'Other'}
+                >
+                  Other
+                </button>
+              </div>
 
-              {/* Service dropdown */}
-              <FloatingSelect
-                id="field-service"
-                label="Service *"
-                value={serviceSelect}
-                onChange={(v) => {
-                  setServiceSelect(v as ServiceOption);
-                  if (v !== 'Other') setOtherService('');
-                }}
-                options={SERVICE_OPTIONS}
-                required
-                error={errors.service}
-              />
-
-              {/* Other service (conditional) */}
-              {serviceSelect === 'Other' && (
-                <FloatingInput
-                  id="field-otherService"
-                  label="Describe the service *"
-                  value={otherService}
-                  onChange={setOtherService}
-                  name="service-other"
-                  autoComplete="on"
-                  enterKeyHint="next"
+              <div className="mt-3">
+                <FloatingSelect
+                  id="field-service"
+                  label="Service *"
+                  value={serviceSelect}
+                  onChange={(v) => {
+                    setServiceSelect(v as ServiceOption);
+                    if (v !== 'Other') setOtherService('');
+                  }}
+                  options={SERVICE_OPTIONS}
                   required
-                  error={errors.otherService}
                 />
-              )}
-            </section>
-          )}
+              </div>
 
-          {/* Step 1: Event */}
-          {step === 1 && (
-            <section className="grid grid-cols-1 gap-4">
-              <div className="grid gap-3 sm:grid-cols-2">
+              {serviceSelect === 'Other' && (
+                <div className="mt-3">
+                  <FloatingInput
+                    id="field-otherService"
+                    label="Describe the service *"
+                    value={otherService}
+                    onChange={setOtherService}
+                    name="service-other"
+                    autoComplete="on"
+                    enterKeyHint="next"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* RECOMMENDED */}
+          <div className="mt-6 mb-2 text-[11px] tracking-wide text-white/60 uppercase">
+            Recommended
+          </div>
+          <section className="grid gap-4">
+            {/* Date + hour dropdown */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="field-date" className="text-sm text-white/80">
+                    Preferred date
+                  </label>
+                  <div className="flex gap-1.5">
+                    <QuickChip onClick={() => setDateTo(0)}>Today</QuickChip>
+                    <QuickChip onClick={() => setDateTo(1)}>Tomorrow</QuickChip>
+                    <QuickChip onClick={() => setNextWeekend(6)}>Sat</QuickChip>
+                    <QuickChip onClick={() => setNextWeekend(0)}>Sun</QuickChip>
+                  </div>
+                </div>
                 <FloatingInput
                   id="field-date"
                   label="Preferred date"
@@ -403,135 +400,78 @@ export default function BookingModal({
                   name="event-date"
                   min={todayISO}
                   max={maxDateISO}
-                  enterKeyHint="next"
-                  error={errors.date}
                 />
-                <FloatingInput
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="field-time" className="text-sm text-white/80">
+                    Time of the event
+                  </label>
+                </div>
+                <FloatingSelect
                   id="field-time"
                   label="Time of the event"
                   value={eventTime}
                   onChange={setEventTime}
-                  type="time"
-                  name="event-time"
-                  autoComplete="on"
-                  enterKeyHint="next"
-                  required
-                  error={errors.time}
+                  options={['', ...TIME_LABELS] as unknown as readonly string[]}
                 />
               </div>
+            </div>
 
-              {/* Party size */}
-              <div
-                id="field-party"
-                className="rounded-2xl border border-white/12 bg-white/[0.04] p-3"
-              >
-                <div className="flex items-center justify-between">
-                  <label className="text-sm text-white/80">Party size (1–15)</label>
-                  {errors.partySize ? (
-                    <span className="text-[11px] text-red-300">{errors.partySize}</span>
-                  ) : (
-                    <span className="text-[11px] text-white/60">Selected: {partySize}</span>
-                  )}
-                </div>
-
-                {/* Quick chips */}
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {quickParty.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setPartySize(n)}
-                      className={clsx(
-                        'h-8 rounded-full border px-3 text-xs transition-colors',
-                        partySize === n
-                          ? 'border-white/30 bg-white/15 text-white'
-                          : 'border-white/12 bg-transparent text-white/80 hover:bg-white/10',
-                      )}
-                      aria-pressed={partySize === n}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Range + numeric pair */}
-                <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3">
-                  <input
-                    type="range"
-                    min={1}
-                    max={15}
-                    step={1}
-                    value={partySize}
-                    onChange={(e) => setPartySize(Number(e.target.value))}
-                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-white/80"
-                    aria-valuemin={1}
-                    aria-valuemax={15}
-                    aria-valuenow={partySize}
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      aria-label="Decrease"
-                      onClick={() => setPartySize((v) => Math.max(1, Math.min(15, v - 1)))}
-                      className="grid h-9 w-9 place-items-center rounded-xl border border-white/15 bg-white/5 text-white/90 hover:bg-white/10"
-                    >
-                      –
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={15}
-                      step={1}
-                      value={partySize}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        const n = Number((v || '').replace(/[^0-9]/g, ''));
-                        setPartySize(Math.max(1, Math.min(15, n || 1)));
-                      }}
-                      className="w-16 rounded-xl border border-white/15 bg-white/5 px-2 py-1.5 text-center text-white/90"
-                      inputMode="numeric"
-                      enterKeyHint="next"
-                    />
-                    <button
-                      type="button"
-                      aria-label="Increase"
-                      onClick={() => setPartySize((v) => Math.max(1, Math.min(15, v + 1)))}
-                      className="grid h-9 w-9 place-items-center rounded-xl border border-white/15 bg-white/5 text-white/90 hover:bg-white/10"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
+            {/* Party size + Location */}
+            <div
+              id="field-party"
+              className="rounded-2xl border border-white/12 bg-white/[0.04] p-3"
+            >
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-white/80">Party size (1–15)</label>
+                <span className="text-[11px] text-white/60">Selected: {partySize}</span>
               </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[1, 2, 3, 4, 5, 6, 8, 10, 12, 15].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPartySize(n)}
+                    className={clsx(
+                      'h-8 rounded-full border px-3 text-xs',
+                      partySize === n
+                        ? 'border-white/30 bg-white/15 text-white'
+                        : 'border-white/12 text-white/80 hover:bg-white/10',
+                    )}
+                    aria-pressed={partySize === n}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-              <FloatingInput
-                label="Location"
-                value={location}
-                onChange={setLocation}
-                name="street-address"
-                autoComplete="street-address"
-                inputMode="text"
-                enterKeyHint="next"
-              />
-            </section>
-          )}
+            <FloatingInput
+              label="Location"
+              value={location}
+              onChange={setLocation}
+              name="street-address"
+              autoComplete="street-address"
+              inputMode="text"
+            />
 
-          {/* Step 2: Options */}
-          {step === 2 && (
-            <section className="grid grid-cols-1 gap-4">
+            {/* Add-ons (airbrush removed) */}
+            {filteredAddOns.length ? (
               <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-3">
                 <label className="text-sm text-white/80">Add-ons</label>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {addOns?.map((a) => (
+                  {filteredAddOns.map((a) => (
                     <button
                       key={a.id}
                       type="button"
                       onClick={() => toggleAddOn(a.id)}
                       className={clsx(
-                        'rounded-full border px-3 py-1 text-sm transition-colors',
+                        'rounded-full border px-3 py-1 text-sm',
                         selAddOns.includes(a.id)
                           ? 'border-white/30 bg-white/15 text-white'
-                          : 'border-white/12 bg-transparent text-white/80 hover:bg-white/10',
+                          : 'border-white/12 text-white/80 hover:bg-white/10',
                       )}
                       aria-pressed={selAddOns.includes(a.id)}
                     >
@@ -541,95 +481,44 @@ export default function BookingModal({
                   ))}
                 </div>
               </div>
+            ) : null}
 
-              <FloatingTextArea
-                id="field-notes"
-                label="Notes"
-                value={notes}
-                onChange={setNotes}
-                placeholder="Share any details, looks, or timing"
-                autoComplete="on"
-                enterKeyHint="done"
-                rows={4}
-                required
-                error={errors.notes}
-              />
-            </section>
-          )}
-
-          {/* Step 3: Review */}
-          {step === 3 && (
-            <section className="space-y-3">
-              <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-4">
-                <h3 className="text-sm font-semibold text-white/90">Summary</h3>
-                <dl className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                  <Row label="Name" value={name} />
-                  <Row label="Email" value={email || '—'} />
-                  <Row label="Phone" value={phone || '—'} />
-                  <Row label="Service" value={chosenServiceTitle || '—'} />
-                  <Row label="Date" value={date || '—'} />
-                  <Row label="Location" value={location || '—'} />
-                  <Row label="Party Size" value={String(partySize)} />
-                  <Row label="Add-ons" value={selAddOns.length ? selAddOns.join(', ') : '—'} />
-                  <Row label="Notes" value={notes || '—'} full />
-                </dl>
-              </div>
-              <p className="text-xs text-white/70">
-                We’ll confirm availability and get back to you with next steps.
-              </p>
-            </section>
-          )}
+            <FloatingTextArea
+              id="field-notes"
+              label="Notes"
+              value={notes}
+              onChange={setNotes}
+              placeholder="Share any details, looks, or timing"
+              autoComplete="on"
+              rows={3}
+            />
+          </section>
         </div>
 
-        {/* Sticky footer actions */}
+        {/* Sticky footer */}
         <div className="pointer-events-auto relative z-10 border-t border-white/12 bg-[rgb(18,13,10)]/94 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center justify-between gap-3">
+            <a
+              href={`sms:+16193996160?&body=${smsBody}`}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm text-white/90 hover:bg-white/10"
+            >
+              Text instead
+            </a>
+
             <button
-              className="inline-flex h-11 min-w-[88px] items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm text-white/90 hover:bg-white/10 disabled:opacity-50"
-              onClick={() => setStep((s) => Math.max(0, s - 1))}
-              disabled={step === 0 || submitting}
+              className="inline-flex h-11 min-w-[130px] items-center justify-center rounded-full px-5 text-sm font-medium text-[rgb(18,13,10)] shadow transition-transform hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                background: 'linear-gradient(180deg, rgba(203,185,164,1), rgba(156,127,99,1))',
+                boxShadow: '0 16px 40px rgba(0,0,0,.28)',
+              }}
+              onClick={() =>
+                minValid() ? submit() : document.getElementById(nextMissingFieldId() || '')?.focus()
+              }
+              disabled={submitting}
               type="button"
             >
-              Back
+              {submitting ? 'Sending…' : minValid() ? 'Send inquiry' : 'Next'}
             </button>
-
-            <div className="flex items-center gap-2">
-              {/* Make visible on mobile too (was hidden) */}
-              <a
-                href={`sms:+16193996160?&body=${smsBody}`}
-                className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm text-white/90 hover:bg-white/10"
-              >
-                Text instead
-              </a>
-
-              {step < 3 ? (
-                <button
-                  className="inline-flex h-11 min-w-[130px] items-center justify-center rounded-full px-5 text-sm font-medium text-[rgb(18,13,10)] shadow transition-transform hover:scale-[1.01] active:scale-[0.99]"
-                  style={{
-                    background: 'linear-gradient(180deg, rgba(203,185,164,1), rgba(156,127,99,1))',
-                    boxShadow: '0 16px 40px rgba(0,0,0,.28)',
-                  }}
-                  onClick={goNext}
-                  disabled={!!Object.keys(errors).length || submitting}
-                  type="button"
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  className="inline-flex h-11 min-w-[130px] items-center justify-center rounded-full px-5 text-sm font-medium text-[rgb(18,13,10)] shadow transition-transform hover:scale-[1.01] active:scale-[0.99]"
-                  style={{
-                    background: 'linear-gradient(180deg, rgba(203,185,164,1), rgba(156,127,99,1))',
-                    boxShadow: '0 16px 40px rgba(0,0,0,.28)',
-                  }}
-                  onClick={submit}
-                  disabled={submitting || !name.trim() || !chosenServiceTitle}
-                  type="button"
-                >
-                  {submitting ? 'Sending…' : 'Send inquiry'}
-                </button>
-              )}
-            </div>
           </div>
 
           <div aria-live="polite" className="mt-2 min-h-[20px] text-center text-sm">
@@ -663,7 +552,6 @@ export default function BookingModal({
           height: auto;
           display: block;
         }
-        /* Ensure iOS/Android autofill stays readable on dark bg */
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
@@ -677,7 +565,21 @@ export default function BookingModal({
   );
 }
 
-/* ---------- Inputs ---------- */
+/* ---------- primitives ---------- */
+
+function QuickChip(props: React.HTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className={clsx(
+        'h-7 rounded-full border px-2.5 text-xs text-white/80',
+        'border-white/12 hover:bg-white/10',
+        props.className,
+      )}
+    />
+  );
+}
 
 function FloatingInput({
   id,
@@ -795,7 +697,6 @@ function FloatingTextArea({
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
         enterKeyHint={enterKeyHint}
-        required={required}
       />
       <label
         className={clsx(
@@ -847,9 +748,9 @@ function FloatingSelect({
         )}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        required={required}
       >
-        <option value="" disabled hidden>
+        {/* allow empty for optional selects like time */}
+        <option value="" hidden={required}>
           Select a service
         </option>
         {options.map((opt) => (
@@ -876,14 +777,3 @@ function FloatingSelect({
     </div>
   );
 }
-
-function Row({ label, value, full = false }: { label: string; value: string; full?: boolean }) {
-  return (
-    <div className={clsx('flex items-start gap-2', full && 'sm:col-span-2')}>
-      <dt className="w-28 shrink-0 text-xs tracking-wide text-white/60 uppercase">{label}</dt>
-      <dd className="text-sm leading-6 text-white/90">{value}</dd>
-    </div>
-  );
-}
-
-
