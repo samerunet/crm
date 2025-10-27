@@ -10,7 +10,7 @@ import Footer from '@/components/ui/footer';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 const SITE_URL = new URL('https://farimakeup.com');
 const SITE_TITLE =
   'San Diego Makeup Artist — Bridal, Luxury Soft & Full Glam in San Diego, OC & LA';
@@ -234,11 +234,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link
           rel="preload"
           as="image"
-          href="/portfolio/12.JPG"
+          href="/portfolio/12-hero.webp"
+          type="image/webp"
+          imageSrcSet="/portfolio/12-hero.webp 1x, /portfolio/12-hero.jpg 2x"
           imageSizes="100vw"
           fetchPriority="high"
         />
-        <Script id="gtm-base" strategy="beforeInteractive">
+        <Script id="gtm-base" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
             new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
             j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=

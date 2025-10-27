@@ -52,9 +52,21 @@ export default function Footer() {
           {/* === /GLASS PANEL === */}
         </div>
 
-        {/* FULL-BLEED COPYRIGHT STRIP (subtle, glassy, matches palette) */}
-        <div className="mt-4 border-t border-black/15 bg-black/5 py-3 text-center text-xs text-black/70 backdrop-blur">
-          © {year} Fari Makeup. All rights reserved.
+        {/* FULL-BLEED COPYRIGHT STRIP (accessible contrast) */}
+        <div className="mt-6 px-4 sm:px-6 md:px-8">
+          <div className="relative mx-auto max-w-screen-2xl overflow-hidden rounded-2xl border border-black/50 bg-black/85 px-4 py-4 text-center text-xs text-white/88 shadow-[0_18px_42px_rgba(0,0,0,0.28)] backdrop-blur-sm">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(140deg, rgba(203,185,164,0.12), rgba(17,17,17,0.7) 60%, rgba(0,0,0,0.85))',
+              }}
+            />
+            <span className="relative block tracking-[0.16em] uppercase text-[11px] text-white/90">
+              © {year} Fari Makeup. All rights reserved.
+            </span>
+          </div>
         </div>
       </div>
     </footer>

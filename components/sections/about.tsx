@@ -14,7 +14,7 @@ const PHOTOS = [
 // Tiny warm unify tint (≈6%). Tweak alpha 0.04–0.08 to taste.
 // Swap rgba for neutral/cool if preferred.
 const TINT_CLASS =
-  'after:content-[""] after:absolute after:inset-0 after:pointer-events-none after:bg-[rgba(250,244,234,0.06)] after:mix-blend-multiply';
+  'after:content-[""] after:absolute after:inset-0 after:pointer-events-none after:bg-[rgba(250,244,234,0.06)] after:mix-blend-normal sm:after:mix-blend-multiply';
 
 const HERO_BLUR =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMScgaGVpZ2h0PScxJyBmaWxsPSdub25lJyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPScxJyBoZWlnaHQ9JzEnIGZpbGw9IiNDQkI5QTQiLz48L3N2Zz4=';
@@ -39,12 +39,12 @@ export default function AboutSection() {
 
       {/* HERO (static) */}
       <div
-        className="specular glass-2 border-border/70 block overflow-hidden rounded-[24px] border"
+        className="relative block overflow-hidden rounded-[24px] border border-black/45 bg-[rgba(18,13,10,0.48)] shadow-[0_22px_60px_rgba(0,0,0,0.32)]"
         aria-label="Signature glam highlights"
       >
         <div className={`relative h-[62vh] min-h-[520px] md:h-[640px] ${TINT_CLASS}`}>
           <Image
-            src="/portfolio/12.JPG"
+            src="/portfolio/12-hero.webp"
             alt="Luxury bridal makeup — soft, skin-focused glam"
             fill
             priority
@@ -62,8 +62,7 @@ export default function AboutSection() {
             className="absolute inset-0"
             style={{
               background:
-                'linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0) 30%, rgba(0,0,0,.18) 100%)',
-              mixBlendMode: 'multiply',
+                'linear-gradient(180deg, rgba(9,6,4,0.42), rgba(9,6,4,0.12) 40%, rgba(9,6,4,0.58) 100%)',
             }}
           />
         </div>

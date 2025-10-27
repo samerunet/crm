@@ -97,6 +97,12 @@ body::before{
     radial-gradient(120% 80% at 50% 110%, rgba(0,0,0,.00), rgba(0,0,0,.00) 40%, rgba(0,0,0,.06) 85%);
 }
 
+@media (max-width: 640px){
+  body::before{
+    background:none;
+  }
+}
+
 /* === 4) Liquid Glass (simplified, stronger, Safari-proof) === */
 .glass,
 .glass-2,
