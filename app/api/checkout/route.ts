@@ -3,13 +3,17 @@ import Stripe from "stripe";
 export const runtime = "nodejs";
 
 const secret = process.env.STRIPE_SECRET_KEY;
-if (!secret) {
-  throw new Error("Missing STRIPE_SECRET_KEY");
-}
-const stripe = new Stripe(secret, { apiVersion: "2024-06-20" });
+const stripe = secret ? new Stripe(secret, { apiVersion: "2024-06-20" }) : null;
 
 export async function POST(req: Request) {
   try {
+    if (!stripe) {
+      return new Response(
+        JSON.stringify({ error: "Stripe not configured" }),
+        { status: 500, headers: { "content-type": "application/json" } },
+      );
+    }
+
     const origin = req.headers.get("origin") ?? new URL(req.url).origin;
     const body = await req.json().catch(() => ({}));
     const email = typeof body?.email === "string" ? body.email : undefined;
