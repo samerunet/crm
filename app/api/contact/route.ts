@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
           from,
           to: [to],
           subject: `Website Inquiry — ${topic || service || 'General'}`,
-          reply_to: email || undefined,
+          replyTo: email || undefined,
           html: buildHtml({
             name,
             email,

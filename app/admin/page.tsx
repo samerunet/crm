@@ -8,9 +8,5 @@ export const metadata = {
 };
 
 export default function AdminPage() {
-  return (
-    <main className="f-container py-6 sm:py-8">
-      <AdminDashboard />
-    </main>
-  );
+  return <AdminDashboard />;
 }

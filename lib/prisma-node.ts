@@ -10,7 +10,8 @@ function createClient() {
     (process.env.DATABASE_URL?.startsWith("prisma://") ||
       process.env.DATABASE_URL?.startsWith("prisma+postgres://") ||
       !!process.env.PRISMA_ACCELERATE_URL);
-  return accelerateEnabled ? base.$extends(withAccelerate()) : base;
+  const client = accelerateEnabled ? base.$extends(withAccelerate()) : base;
+  return client as PrismaClient;
 }
 
 export const prisma = g.prisma ?? createClient();

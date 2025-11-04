@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import ReviewsCarousel, { ReviewDisplay } from './reviews-carousel';
+// import ReviewsCarousel, { ReviewDisplay } from './reviews-carousel';
 
 export const metadata: Metadata = {
   title: 'Client Reviews · Luxury Bridal Makeup Testimonials',

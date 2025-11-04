@@ -1,242 +1,200 @@
-export const runtime = 'nodejs';
+import { NextRequest, NextResponse } from "next/server";
+import { Prisma, LeadStage } from "@prisma/client";
+import { prisma } from "@/lib/prisma-node";
+import { subHours } from "date-fns";
 
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma-node';
+const EMAIL_PLACEHOLDER = "no-email@placeholder.invalid";
 
-type LeadRecord = {
-  id: string;
-  name: string | null;
-  email: string;
-  phone: string | null;
-  eventDate: Date | null;
-  message: string | null;
-  source: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+const parseBoolean = (value: string | null) => value === "true" || value === "1";
 
-const EMAIL_PLACEHOLDER = 'no-email@placeholder.invalid';
-
-const toIso = (value: unknown) => {
-  if (typeof value !== 'string') return undefined;
-  const dt = new Date(value);
-  return Number.isNaN(dt.getTime()) ? undefined : dt.toISOString();
-};
-
-const useDemoStore = !process.env.DATABASE_URL && process.env.NODE_ENV !== 'production';
-
-const demoNow = Date.now();
-const demoLeads: LeadRecord[] = [
-  {
-    id: 'demo-lead-1',
-    name: 'Alice Park',
-    email: 'alice@example.com',
-    phone: '555-201',
-    eventDate: new Date(demoNow),
-    message: 'Looking for soft glam for wedding morning.',
-    source: 'demo',
-    createdAt: new Date(demoNow),
-    updatedAt: new Date(demoNow),
-  },
-  {
-    id: 'demo-lead-2',
-    name: 'Brianna Chen',
-    email: 'bri@example.com',
-    phone: '555-202',
-    eventDate: new Date(demoNow + 3 * 24 * 60 * 60 * 1000),
-    message: 'Bridal party of 6 — need onsite team.',
-    source: 'demo',
-    createdAt: new Date(demoNow - 4 * 60 * 60 * 1000),
-    updatedAt: new Date(demoNow - 4 * 60 * 60 * 1000),
-  },
-  {
-    id: 'demo-lead-3',
-    name: 'Cami Diaz',
-    email: 'cami@example.com',
-    phone: '555-203',
-    eventDate: new Date(demoNow - 10 * 24 * 60 * 60 * 1000),
-    message: 'Post-wedding photoshoot touch-up.',
-    source: 'demo',
-    createdAt: new Date(demoNow - 2 * 24 * 60 * 60 * 1000),
-    updatedAt: new Date(demoNow - 2 * 24 * 60 * 60 * 1000),
-  },
-];
-
-export async function GET() {
-  if (useDemoStore) {
-    console.warn('GET /api/leads using in-memory demo data (DATABASE_URL not set).');
-    return NextResponse.json({ ok: true, leads: demoLeads });
+const parseDate = (raw: unknown): Date | undefined => {
+  if (!raw) return undefined;
+  if (typeof raw === "string") {
+    const date = new Date(raw);
+    return Number.isNaN(date.getTime()) ? undefined : date;
   }
+  if (raw instanceof Date) {
+    return Number.isNaN(raw.getTime()) ? undefined : raw;
+  }
+  return undefined;
+};
 
+const normalizeStage = (value: unknown): LeadStage | undefined => {
+  if (typeof value !== "string") return undefined;
+  const upper = value.toUpperCase().replace(/-/g, "_");
+  if (upper in LeadStage) {
+    return upper as LeadStage;
+  }
+  return undefined;
+};
+
+const sanitizeString = (value: unknown, max = 255): string | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, max);
+};
+
+export async function GET(request: NextRequest) {
   try {
-    const leads = await prisma.lead.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return NextResponse.json({ ok: true, leads });
-  } catch (e: any) {
-    console.error('GET /api/leads failed', e);
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? 'Failed to fetch leads' },
-      { status: 500 },
+    const { searchParams } = new URL(request.url);
+    const andFilters: Prisma.LeadWhereInput[] = [];
+
+    const stagesRaw = searchParams.getAll("stage").flatMap((chunk) =>
+      chunk
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
     );
+    if (stagesRaw.length) {
+      const stages = stagesRaw
+        .map((value) => normalizeStage(value))
+        .filter((value): value is LeadStage => Boolean(value));
+      if (stages.length) {
+        andFilters.push({ stage: { in: stages } });
+      }
+    }
+
+    const createdAfter = parseDate(searchParams.get("createdAfter"));
+    if (createdAfter) {
+      andFilters.push({ createdAt: { gte: createdAfter } });
+    }
+
+    if (parseBoolean(searchParams.get("consultRequested"))) {
+      andFilters.push({ OR: [{ consultRequested: true }, { stage: LeadStage.CONSULT_TRIAL }] });
+    }
+
+    if (parseBoolean(searchParams.get("depositPending"))) {
+      andFilters.push({ depositPending: true });
+    }
+
+    if (parseBoolean(searchParams.get("contractPending"))) {
+      andFilters.push({ contractPending: true });
+    }
+
+    if (parseBoolean(searchParams.get("highBudget"))) {
+      andFilters.push({ OR: [{ highBudget: true }, { budgetCents: { gte: 50000 } }] });
+    }
+
+    if (parseBoolean(searchParams.get("awaitingReply"))) {
+      const cutoff = subHours(new Date(), 48);
+      andFilters.push({
+        lastOutboundAt: { not: null },
+      });
+      andFilters.push({
+        OR: [{ lastInboundAt: null }, { lastInboundAt: { lt: cutoff } }],
+      });
+      andFilters.push({ lastOutboundAt: { lt: cutoff } });
+    }
+
+    const searchTerm = searchParams.get("search");
+    if (searchTerm) {
+      andFilters.push({
+        OR: [
+          { name: { contains: searchTerm, mode: "insensitive" } },
+          { email: { contains: searchTerm, mode: "insensitive" } },
+          { phone: { contains: searchTerm, mode: "insensitive" } },
+          { message: { contains: searchTerm, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    const where: Prisma.LeadWhereInput | undefined = andFilters.length ? { AND: andFilters } : undefined;
+
+    const leads = await prisma.lead.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ ok: true, leads });
+  } catch (error: any) {
+    console.error("GET /api/leads failed", error);
+    return NextResponse.json({ ok: false, error: error?.message ?? "Failed to fetch leads" }, { status: 500 });
   }
 }
 
-export async function POST(req: Request) {
-  if (useDemoStore) {
-    try {
-      const payload = await req.json();
-      const name = typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) : null;
-      const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
-      const email = emailRaw || EMAIL_PLACEHOLDER;
-      const phone =
-        typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
-      const message =
-        typeof payload?.message === 'string' ? payload.message.trim().slice(0, 5000) || null : null;
-      const source =
-        typeof payload?.source === 'string' ? payload.source.trim().slice(0, 150) || null : null;
-      const eventDateValue = payload?.eventDate || payload?.date || payload?.dateOfService;
-      const eventDateIso = toIso(eventDateValue);
-      const eventDate = eventDateIso ? new Date(eventDateIso) : null;
-
-      const lead: LeadRecord = {
-        id: `demo-lead-${Date.now()}`,
-        name,
-        email,
-        phone,
-        message,
-        source,
-        eventDate,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      demoLeads.unshift(lead);
-      console.warn('POST /api/leads stored lead in demo memory store (DATABASE_URL not set).');
-      return NextResponse.json({ ok: true, lead }, { status: 201 });
-    } catch (e: any) {
-      console.error('POST /api/leads demo mode failed', e);
-      return NextResponse.json(
-        { ok: false, error: e?.message ?? 'Failed to create lead' },
-        { status: 500 },
-      );
-    }
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const payload = await req.json();
-    const name = typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) : null;
-    const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
-    const email = emailRaw || EMAIL_PLACEHOLDER;
-    const phone =
-      typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
-    const message =
-      typeof payload?.message === 'string' ? payload.message.trim().slice(0, 5000) || null : null;
-    const source =
-      typeof payload?.source === 'string' ? payload.source.trim().slice(0, 150) || null : null;
-    const eventDateValue = payload?.eventDate || payload?.date || payload?.dateOfService;
-    const eventDateIso = toIso(eventDateValue);
-    const eventDate = eventDateIso ? new Date(eventDateIso) : undefined;
+    const payload = await request.json();
+    const name = sanitizeString(payload?.name);
+    const emailInput = sanitizeString(payload?.email) ?? EMAIL_PLACEHOLDER;
+    const phone = sanitizeString(payload?.phone, 100);
+    const message = sanitizeString(payload?.message, 5000);
+    const source = sanitizeString(payload?.source, 150);
+    const stage = normalizeStage(payload?.stage) ?? LeadStage.NEW;
+    const eventDate = parseDate(payload?.eventDate ?? payload?.date ?? payload?.dateOfService);
 
     const lead = await prisma.lead.create({
       data: {
         name,
-        email,
+        email: emailInput,
         phone,
         message,
         source,
+        stage,
         eventDate,
+        consultRequested: Boolean(payload?.consultRequested),
+        depositPending: Boolean(payload?.depositPending),
+        contractPending: Boolean(payload?.contractPending),
+        highBudget:
+          typeof payload?.highBudget === "boolean"
+            ? payload.highBudget
+            : (typeof payload?.budgetCents === "number" && payload.budgetCents >= 50000) || false,
+        budgetCents: typeof payload?.budgetCents === "number" ? payload.budgetCents : null,
+        lastInboundAt: parseDate(payload?.lastInboundAt),
+        lastOutboundAt: parseDate(payload?.lastOutboundAt),
       },
     });
+
     return NextResponse.json({ ok: true, lead }, { status: 201 });
-  } catch (e: any) {
-    console.error('POST /api/leads failed', e);
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? 'Failed to create lead' },
-      { status: 500 },
-    );
+  } catch (error: any) {
+    console.error("POST /api/leads failed", error);
+    return NextResponse.json({ ok: false, error: error?.message ?? "Failed to create lead" }, { status: 500 });
   }
 }
 
-export async function PATCH(req: Request) {
-  if (useDemoStore) {
-    try {
-      const payload = await req.json();
-      const id = typeof payload?.id === 'string' ? payload.id : null;
-      if (!id) {
-        return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 });
-      }
-      const idx = demoLeads.findIndex((lead) => lead.id === id);
-      if (idx === -1) {
-        return NextResponse.json({ ok: false, error: 'Lead not found' }, { status: 404 });
-      }
-      const name =
-        typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) || null : null;
-      const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
-      const email = emailRaw || EMAIL_PLACEHOLDER;
-      const phone =
-        typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
-      const message =
-        typeof payload?.message === 'string' ? payload.message.slice(0, 10000) || null : null;
-      const source =
-        typeof payload?.source === 'string' ? payload.source.trim().slice(0, 150) || null : null;
-      const eventDateIso = toIso(payload?.eventDate);
-      let eventDate = demoLeads[idx].eventDate;
-      if (eventDateIso) {
-        eventDate = new Date(eventDateIso);
-      } else if (payload?.eventDate === null) {
-        eventDate = null;
-      }
-
-      const updated: LeadRecord = {
-        ...demoLeads[idx],
-        name,
-        email,
-        phone,
-        message,
-        source,
-        eventDate,
-        updatedAt: new Date(),
-      };
-      demoLeads[idx] = updated;
-      return NextResponse.json({ ok: true, lead: updated });
-    } catch (e: any) {
-      console.error('PATCH /api/leads demo mode failed', e);
-      return NextResponse.json(
-        { ok: false, error: e?.message ?? 'Failed to update lead' },
-        { status: 500 },
-      );
-    }
-  }
-
+export async function PATCH(request: NextRequest) {
   try {
-    const payload = await req.json();
-    const id = typeof payload?.id === 'string' ? payload.id : null;
+    const payload = await request.json();
+    const id = sanitizeString(payload?.id);
     if (!id) {
-      return NextResponse.json({ ok: false, error: 'Missing id' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
     }
-    const name =
-      typeof payload?.name === 'string' ? payload.name.trim().slice(0, 255) || null : null;
-    const emailRaw = typeof payload?.email === 'string' ? payload.email.trim() : '';
-    const email = emailRaw || EMAIL_PLACEHOLDER;
-    const phone =
-      typeof payload?.phone === 'string' ? payload.phone.trim().slice(0, 100) || null : null;
-    const message =
-      typeof payload?.message === 'string' ? payload.message.slice(0, 10000) || null : null;
-    const source =
-      typeof payload?.source === 'string' ? payload.source.trim().slice(0, 150) || null : null;
-    const eventDateIso = toIso(payload?.eventDate);
 
-    const data: Record<string, unknown> = {
-      name,
-      email,
-      phone,
-      message,
-      source,
-    };
-    if (eventDateIso) {
-      data.eventDate = new Date(eventDateIso);
-    } else if (payload?.eventDate === null) {
-      data.eventDate = null;
+    const data: Prisma.LeadUpdateInput = {};
+
+    if (payload && Object.hasOwn(payload, "name")) data.name = sanitizeString(payload?.name);
+    if (payload && Object.hasOwn(payload, "email")) {
+      const email = sanitizeString(payload?.email);
+      data.email = email ?? EMAIL_PLACEHOLDER;
+    }
+    if (payload && Object.hasOwn(payload, "phone")) data.phone = sanitizeString(payload?.phone, 100);
+    if (payload && Object.hasOwn(payload, "message")) data.message = sanitizeString(payload?.message, 5000);
+    if (payload && Object.hasOwn(payload, "source")) data.source = sanitizeString(payload?.source, 150);
+
+    const stage = normalizeStage(payload?.stage);
+    if (stage) data.stage = stage;
+
+    if (payload && Object.hasOwn(payload, "consultRequested")) data.consultRequested = Boolean(payload.consultRequested);
+    if (payload && Object.hasOwn(payload, "depositPending")) data.depositPending = Boolean(payload.depositPending);
+    if (payload && Object.hasOwn(payload, "contractPending")) data.contractPending = Boolean(payload.contractPending);
+    if (payload && Object.hasOwn(payload, "highBudget")) data.highBudget = Boolean(payload.highBudget);
+
+    if (payload && Object.hasOwn(payload, "budgetCents")) {
+      data.budgetCents = typeof payload?.budgetCents === "number" ? payload.budgetCents : null;
+    }
+
+    if (payload && Object.hasOwn(payload, "eventDate")) {
+      const eventDate = parseDate(payload?.eventDate);
+      data.eventDate = eventDate ?? null;
+    }
+
+    if (payload && Object.hasOwn(payload, "lastInboundAt")) {
+      data.lastInboundAt = parseDate(payload?.lastInboundAt) ?? null;
+    }
+
+    if (payload && Object.hasOwn(payload, "lastOutboundAt")) {
+      data.lastOutboundAt = parseDate(payload?.lastOutboundAt) ?? null;
     }
 
     const lead = await prisma.lead.update({
@@ -245,11 +203,8 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json({ ok: true, lead });
-  } catch (e: any) {
-    console.error('PATCH /api/leads failed', e);
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? 'Failed to update lead' },
-      { status: 500 },
-    );
+  } catch (error: any) {
+    console.error("PATCH /api/leads failed", error);
+    return NextResponse.json({ ok: false, error: error?.message ?? "Failed to update lead" }, { status: 500 });
   }
 }

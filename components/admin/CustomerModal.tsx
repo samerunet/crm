@@ -97,7 +97,7 @@ export default function CustomerModal({
 
       {/* Centered modal */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center p-4 sm:p-6">
-        <div className="pointer-events-auto wglass-strong max-w-[980px] w-full rounded-2xl border border-border/60 shadow-[0_28px_80px_rgba(0,0,0,0.22)]">
+        <div className="pointer-events-auto glass-strong max-w-[980px] w-full rounded-[--radius-xl] border border-[--color-border]/70 bg-[--color-card] shadow-[0_28px_80px_rgba(0,0,0,0.28)]">
           {/* Header */}
           <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-border/50">
             <div>

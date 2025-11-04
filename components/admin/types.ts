@@ -54,6 +54,8 @@ export interface Contract {
   template?: string;
   title?: string;
   body?: string;
+  totalAmount?: number;
+  depositAmount?: number;
   status?: ContractStatus;
   createdAt?: string;
   sentAt?: string | Date;
@@ -61,6 +63,8 @@ export interface Contract {
   version?: number;
   digitalStamp?: string;
   esignFields?: EsignField[];
+  url?: string;
+  downloadUrl?: string;
 }
 
 export type ContractRec = Contract;
@@ -68,12 +72,19 @@ export type ContractRec = Contract;
 export interface Invoice {
   id: string;
   leadId: string;
-  type: "deposit" | "balance";
-  amount: number;
+  type?: "deposit" | "balance" | string;
+  kind?: string;
+  amount?: number;
+  total?: number;
+  status?: "paid" | "unpaid" | string;
   createdAt: string;
   dueAt?: string;
   paidAt?: string;
   method?: "cash" | "venmo" | "zelle" | "card";
+  url?: string;
+  number?: string;
+  payments?: Array<{ amount?: number; at?: string }>;
+  lines?: Array<{ amount?: number; label?: string }>;
 }
 export type InvoiceRec = Invoice;
 
@@ -88,6 +99,10 @@ export interface Appointment {
   end: string | Date;
   status?: AppointmentStatus;
   price?: number;
+  location?: {
+    city?: string;
+    state?: string;
+  } | string | null;
 }
 
 export interface Sale {
@@ -107,10 +122,28 @@ export interface Lead {
   createdAt?: string;
   lastContactAt?: string | Date;
   dateOfService?: string; // ISO
-  notes?: string[];
+  notes?: Array<{ id: string; text: string; at: string }> | string[] | string | null;
+  notesList?: string[];
   address?: Address;
   tags?: string[];
   color?: string;
+  internalNotes?: string | null;
+  intake?: {
+    skinType?: string;
+    hairType?: string;
+    allergies?: string;
+    preferences?: string;
+    concerns?: string;
+    referenceLinks?: string;
+    addressOnSite?: string;
+    timeWindow?: string;
+  };
+  intakeNotes?: string[];
+  addOns?: Array<Record<string, unknown>>;
+  services?: Array<{ name?: string; price?: number }>;
+  travelFee?: number;
+  discount?: number;
+  budgetCents?: number;
 
   contracts?: Contract[];
   invoices?: Invoice[];

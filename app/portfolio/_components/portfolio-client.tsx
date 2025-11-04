@@ -93,6 +93,8 @@ export default function PortfolioClient() {
     endSwipe(e.clientX);
   };
 
+  const activePhoto = idx !== null ? PHOTOS[idx] : null;
+
   return (
     <main className="f-container py-10 md:py-14">
       <header className="mb-6 md:mb-8">
@@ -133,7 +135,7 @@ export default function PortfolioClient() {
         </div>
       </section>
 
-      {idx !== null && (
+      {activePhoto && (
         <div
           role="dialog"
           aria-modal="true"
@@ -178,8 +180,8 @@ export default function PortfolioClient() {
 
             <div className="relative flex h-full items-center justify-center rounded-xl bg-black/60">
               <Image
-                src={PHOTOS[idx].src}
-                alt={PHOTOS[idx].alt}
+                src={activePhoto.src}
+                alt={activePhoto.alt}
                 fill
                 sizes="(max-width: 1024px) 90vw, 70vw"
                 className="object-contain"

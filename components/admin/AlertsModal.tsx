@@ -44,11 +44,15 @@ export default function AlertsModal({
             (!isPaid && Number.isFinite(dueMs) && dueMs < now);
           if (!overdue) continue;
 
-          const paid = (inv.payments ?? []).reduce(
-            (a, p) => a + (Number(p.amount) || 0),
+          const paid = (inv.payments ?? []).reduce<number>(
+            (acc, payment) => acc + (Number(payment?.amount) || 0),
             0
           );
-          const total = Number(inv.total) || (inv.lines ?? []).reduce((a, l) => a + (Number(l.amount) || 0), 0);
+          const lineTotal = (inv.lines ?? []).reduce<number>(
+            (acc, line) => acc + (Number(line?.amount) || 0),
+            0
+          );
+          const total = Number(inv.total) || lineTotal;
           const balance = Math.max(0, total - paid);
           const daysOverdue = Number.isFinite(dueMs)
             ? Math.max(1, Math.ceil((now - dueMs) / (1000 * 60 * 60 * 24)))
@@ -91,7 +95,7 @@ export default function AlertsModal({
           lead,
           id: c.id,
           template: c.template,
-          status: c.status,
+          status: c.status ?? 'pending',
           sentAt: c.sentAt ? new Date(c.sentAt) : undefined,
         });
       }

@@ -1,6 +1,5 @@
-// prisma/schema.prisma
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "dataproxy"
 }
 
@@ -10,18 +9,18 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String?
-  image         String?
-  passwordHash  String?              // <-- NEW
-  role          String   @default("USER")
-  accounts      Account[]
-  sessions      Session[]
-  enrollments   Enrollment[]
-  orders        Order[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String?
+  image        String?
+  passwordHash String?
+  role         String       @default("USER")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  accounts     Account[]
+  enrollments  Enrollment[]
+  orders       Order[]
+  sessions     Session[]
 }
 
 model Account {
@@ -34,8 +33,7 @@ model Account {
   refresh_token     String?
   expires_at        Int?
   token_type        String?
-
-  user User @relation(fields: [userId], references: [id])
+  user              User    @relation(fields: [userId], references: [id])
 
   @@unique([provider, providerAccountId])
 }
@@ -45,19 +43,19 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user User    @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
 }
 
 model Course {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String       @id @default(cuid())
+  slug        String       @unique
   title       String
   description String
-  priceCents  Int      @default(0)
-  published   Boolean  @default(false)
+  priceCents  Int          @default(0)
+  published   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   enrollments Enrollment[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model Guide {
@@ -67,9 +65,9 @@ model Guide {
   description String
   priceCents  Int      @default(0)
   published   Boolean  @default(false)
-  orders      Order[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  orders      Order[]
 }
 
 model Enrollment {
@@ -77,35 +75,124 @@ model Enrollment {
   userId    String
   courseId  String
   createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
+  course    Course   @relation(fields: [courseId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, courseId])
 }
 
 model Order {
-  id           String   @id @default(cuid())
-  userId       String?
-  guideId      String?
-  amountCents  Int
-  currency     String   @default("usd")
-  status       String   @default("PENDING")
-  externalRef  String?
-  createdAt    DateTime @default(now())
-
-  user  User?  @relation(fields: [userId], references: [id])
-  guide Guide? @relation(fields: [guideId], references: [id])
+  id          String   @id @default(cuid())
+  userId      String?
+  guideId     String?
+  amountCents Int
+  currency    String   @default("usd")
+  status      String   @default("PENDING")
+  externalRef String?
+  createdAt   DateTime @default(now())
+  guide       Guide?   @relation(fields: [guideId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id])
 }
 
 model Lead {
-  id          String   @id @default(cuid())
-  name        String?
-  email       String
-  phone       String?
-  eventDate   DateTime?
-  message     String?
-  source      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String        @id @default(cuid())
+  name             String?
+  email            String
+  phone            String?
+  eventDate        DateTime?
+  message          String?
+  source           String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  budgetCents      Int?
+  consultRequested Boolean       @default(false)
+  contractPending  Boolean       @default(false)
+  depositPending   Boolean       @default(false)
+  highBudget       Boolean       @default(false)
+  lastInboundAt    DateTime?
+  lastOutboundAt   DateTime?
+  stage            LeadStage     @default(NEW)
+  appointments     Appointment[]
+  contracts        Contract[]
+  tasks            Task[]
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  leadId      String?
+  title       String
+  notes       String?
+  status      TaskStatus @default(OPEN)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  lead        Lead?      @relation(fields: [leadId], references: [id])
+
+  @@index([status, dueDate])
+  @@index([leadId])
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  leadId    String?
+  title     String
+  status    AppointmentStatus @default(TENTATIVE)
+  start     DateTime
+  end       DateTime?
+  location  String?
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  lead      Lead?             @relation(fields: [leadId], references: [id])
+
+  @@index([start])
+  @@index([leadId])
+}
+
+model Contract {
+  id          String         @id @default(cuid())
+  leadId      String
+  title       String?
+  amountCents Int?
+  status      ContractStatus @default(DRAFT)
+  sentAt      DateTime?
+  signedAt    DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  lead        Lead           @relation(fields: [leadId], references: [id])
+
+  @@index([status])
+  @@index([leadId])
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  CONSULT_TRIAL
+  PROPOSAL_SENT
+  DEPOSIT_RECEIVED
+  CONTRACT_SIGNED
+  SCHEDULED
+  COMPLETED
+  LOST
+}
+
+enum TaskStatus {
+  OPEN
+  COMPLETED
+}
+
+enum AppointmentStatus {
+  TENTATIVE
+  CONFIRMED
+  COMPLETED
+  CANCELED
+}
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  SIGNED
+  VOID
 }

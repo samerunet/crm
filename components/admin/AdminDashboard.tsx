@@ -1,825 +1,671 @@
-// FILE: components/admin/AdminDashboard.tsx  (DROP-IN REPLACEMENT)
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import CalendarIOS from "./CalendarIOS";
-import LeadList from "./LeadList";
-import NewLeadModal from "./NewLeadModal";
-import HeaderAlerts from "./HeaderAlerts";
-import KPIStrip from "./KPIStrip";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { endOfMonth, format, isSameDay, parseISO, startOfMonth } from "date-fns";
+
+import { CalendarProvider, useCalendarContext } from "@/components/calendar/CalendarContext";
+import MonthWidget from "@/components/calendar/MonthWidget";
+import TodayPanel from "@/components/calendar/TodayPanel";
+import CreateEventModal from "@/components/calendar/CreateEventModal";
+import SearchBar from "@/components/dashboard/SearchBar";
+import StatsCards from "@/components/dashboard/StatsCards";
+import NewLeadsSheet from "@/components/dashboard/NewLeadsSheet";
+import LeadQuickSearch from "@/components/dashboard/LeadQuickSearch";
+import PipelineSidebar from "@/components/pipeline/PipelineSidebar";
+import QuickFilters from "@/components/pipeline/QuickFilters";
+import TasksList from "@/components/tasks/TasksList";
+import AppointmentsList from "@/components/appointments/AppointmentsList";
 import CustomerModal from "./CustomerModal";
-import { Lead, Appointment, Sale, STAGES, LeadStage } from "./types";
+import NewLeadModal from "./NewLeadModal";
+import LeadList from "./LeadList";
+import { useDashboardParams } from "@/lib/hooks/use-dashboard-params";
+import { usePollingQuery } from "@/lib/hooks/use-polling-query";
+import {
+  AppointmentStatusEnum,
+  LeadStageEnum,
+  listAppointments,
+  listLeads,
+  updateLead,
+} from "@/lib/api";
+import type {
+  Appointment,
+  AppointmentStatus,
+  Lead as ApiLead,
+  LeadStage,
+  Task,
+} from "@/lib/api";
+import type { Lead as LegacyLead, LeadStage as LegacyLeadStage } from "./types";
+import { STAGES as LEGACY_STAGES } from "./types";
+import { DASHBOARD_DATA_EVENT, emitDashboardDataChange } from "@/lib/dashboard/events";
 
-/* ----- demo data (replace with real data) ----- */
-const nowMs = Date.now();
-const hourMs = 60 * 60 * 1000;
-const DEMO_LEADS: Lead[] = [
-  {
-    id: "l1",
-    name: "Alice Park",
-    phone: "555-201",
-    email: "alice@example.com",
-    stage: "uncontacted",
-    dateOfService: new Date(nowMs).toISOString(),
-    tags: [],
-  },
-  {
-    id: "l2",
-    name: "Brianna Chen",
-    phone: "555-202",
-    email: "bri@example.com",
-    stage: "booked",
-    lastContactAt: new Date(nowMs).toISOString(),
-    dateOfService: new Date(nowMs + 86400000 * 3).toISOString(),
-    tags: ["repeat"],
-  },
-  {
-    id: "l3",
-    name: "Cami Diaz",
-    phone: "555-203",
-    email: "cami@example.com",
-    stage: "completed",
-    lastContactAt: new Date(nowMs - 86400000).toISOString(),
-    dateOfService: new Date(nowMs - 86400000 * 10).toISOString(),
-    tags: [],
-  },
-];
-const DEMO_EVENTS: Appointment[] = [
-  {
-    id: "e1",
-    title: "Bridal Trial — Alice",
-    start: new Date(nowMs).toISOString(),
-    end: new Date(nowMs + hourMs).toISOString(),
-    price: 120,
-    leadId: "l1",
-    status: "booked",
-    service: "trial",
-  },
-  {
-    id: "e2",
-    title: "Wedding — Brianna",
-    start: new Date(nowMs + 86400000 * 3).toISOString(),
-    end: new Date(nowMs + 86400000 * 3 + hourMs * 4).toISOString(),
-    price: 380,
-    leadId: "l2",
-    status: "booked",
-    service: "wedding",
-  },
-  {
-    id: "e3",
-    title: "Studio — Cami",
-    start: new Date(nowMs - 86400000 * 10).toISOString(),
-    end: new Date(nowMs - 86400000 * 10 + hourMs * 2).toISOString(),
-    price: 180,
-    leadId: "l3",
-    status: "completed",
-    service: "studio",
-  },
-];
-const DEMO_SALES: Sale[] = [
-  { id: "s1", amount: 59, type: "guide", createdAt: new Date(nowMs).toISOString() },
-];
+const API_TO_LEGACY_STAGE = {
+  [LeadStageEnum.NEW]: "uncontacted",
+  [LeadStageEnum.CONTACTED]: "contacted",
+  [LeadStageEnum.CONSULT_TRIAL]: "trial",
+  [LeadStageEnum.PROPOSAL_SENT]: "changes",
+  [LeadStageEnum.DEPOSIT_RECEIVED]: "deposit",
+  [LeadStageEnum.CONTRACT_SIGNED]: "confirmed",
+  [LeadStageEnum.SCHEDULED]: "booked",
+  [LeadStageEnum.COMPLETED]: "completed",
+  [LeadStageEnum.LOST]: "lost",
+} as const satisfies Record<LeadStage, LegacyLeadStage>;
 
-type DbLead = {
-  id: string;
-  name: string | null;
-  email: string;
-  phone: string | null;
-  eventDate: Date | string | null;
-  message: string | null;
-  source: string | null;
-  createdAt: Date | string;
+const LEGACY_TO_API_STAGE = {
+  uncontacted: LeadStageEnum.NEW,
+  contacted: LeadStageEnum.CONTACTED,
+  deposit: LeadStageEnum.DEPOSIT_RECEIVED,
+  trial: LeadStageEnum.CONSULT_TRIAL,
+  booked: LeadStageEnum.SCHEDULED,
+  confirmed: LeadStageEnum.CONTRACT_SIGNED,
+  changes: LeadStageEnum.PROPOSAL_SENT,
+  completed: LeadStageEnum.COMPLETED,
+  lost: LeadStageEnum.LOST,
+} as const satisfies Record<LegacyLeadStage, LeadStage>;
+
+const STATUS_COLORS = {
+  [AppointmentStatusEnum.TENTATIVE]: "rgba(180,83,9,0.22)",
+  [AppointmentStatusEnum.CONFIRMED]: "rgba(108,58,34,0.22)",
+  [AppointmentStatusEnum.COMPLETED]: "rgba(0,135,103,0.22)",
+  [AppointmentStatusEnum.CANCELED]: "rgba(122,48,34,0.22)",
+} as const satisfies Record<AppointmentStatus, string>;
+
+const STATUS_DOTS = {
+  [AppointmentStatusEnum.TENTATIVE]: "var(--amber)",
+  [AppointmentStatusEnum.CONFIRMED]: "var(--color-primary)",
+  [AppointmentStatusEnum.COMPLETED]: "var(--sage)",
+  [AppointmentStatusEnum.CANCELED]: "var(--destructive)",
+} as const satisfies Record<AppointmentStatus, string>;
+
+type CalendarEventDensity = Record<string, Partial<Record<AppointmentStatus, number>>>;
+
+type DashboardLead = LegacyLead & Record<string, any>;
+
+type DashboardAppointments = {
+  byDate: CalendarEventDensity;
+  forSelectedDay: Appointment[];
 };
 
-const EMAIL_PLACEHOLDER = "no-email@placeholder.invalid";
+export default function AdminDashboard() {
+  return (
+    <CalendarProvider>
+      <DashboardShell />
+    </CalendarProvider>
+  );
+}
 
-const parseMessageDetails = (raw?: string | null) => {
-  if (!raw) {
-    return { note: null, details: {} as Record<string, string> };
-  }
-  const parts = raw.split(/\n{2,}/);
-  const note = parts.shift()?.trim() || null;
-  const detailLines = parts
-    .join("\n")
-    .split(/\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const details: Record<string, string> = {};
-  for (const line of detailLines) {
-    const idx = line.indexOf(":");
-    if (idx <= 0) continue;
-    const key = line.slice(0, idx).trim().toLowerCase();
-    const value = line.slice(idx + 1).trim();
-    if (!value) continue;
-    details[key] = value;
-  }
-  return { note, details };
-};
+function DashboardShell() {
+  const { visibleMonth, selectedDate, setSelectedDate } = useCalendarContext();
+  const { stage, filters, tab, setTab, search } = useDashboardParams();
 
-const safeIso = (value?: string | Date | null) => {
-  if (!value) return undefined;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-};
+  const [activeLead, setActiveLead] = useState<DashboardLead | null>(null);
+  const [leadBaseline, setLeadBaseline] = useState<DashboardLead | null>(null);
+  const [savingLead, setSavingLead] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [newLeadModalOpen, setNewLeadModalOpen] = useState(false);
+  const [newLeadInitialDate, setNewLeadInitialDate] = useState<Date | undefined>();
+  const [newLeadsOpen, setNewLeadsOpen] = useState(false);
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [eventLeadId, setEventLeadId] = useState<string | null>(null);
 
-const formatDateForMessage = (value?: string | Date | null) => {
-  if (!value) return "";
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return "";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-    const parsed = new Date(trimmed);
-    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
-    return trimmed;
-  }
-  const parsed = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toISOString().slice(0, 10);
-};
+  const filtersKey = filters.slice().sort().join("|");
+  const recentCreatedAfter = useMemo(() => {
+    if (!filtersKey.split("|").includes("new")) return undefined;
+    return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  }, [filtersKey]);
 
-const buildMessageFromLead = (lead: Lead & Record<string, any>) => {
-  const primary =
-    (Array.isArray(lead.notes) && lead.notes[0]?.text) ||
-    (lead.intake?.initialMessage as string | undefined) ||
-    (typeof lead.notes === "string" ? lead.notes : "") ||
-    "";
+  const leadParams = useMemo(
+    () => {
+      const parsedFilters = filtersKey ? filtersKey.split("|").filter(Boolean) : [];
+      return buildLeadParams(stage, parsedFilters, search, recentCreatedAfter);
+    },
+    [stage, filtersKey, search, recentCreatedAfter],
+  );
+  const leadDeps = JSON.stringify(leadParams);
 
-  const serviceLabel =
-    lead.eventType ||
-    (typeof lead.intake?.service === "string" ? lead.intake.service : undefined) ||
-    undefined;
-  const preferredDate =
-    lead.intake?.preferredDate || lead.dateOfService || undefined;
-  const eventTime = lead.eventTime || lead.intake?.eventTime || undefined;
-  const location = lead.location || lead.intake?.location || undefined;
-  const partySize =
-    typeof lead.partySize === "number"
-      ? lead.partySize
-      : typeof lead.intake?.partySize === "number"
-      ? lead.intake.partySize
-      : undefined;
-  const addOns =
-    (Array.isArray(lead.addOns) && lead.addOns.length
-      ? lead.addOns
-      : Array.isArray(lead.intake?.addOns)
-      ? lead.intake.addOns
-      : []
-    )
-      .map((item: any) => (typeof item === "string" ? item.trim() : ""))
-      .filter(Boolean);
+  const {
+    data: leadsData,
+    refresh: refreshLeads,
+    isLoading: leadsLoading,
+  } = usePollingQuery<ApiLead[]>(() => listLeads(leadParams), [leadDeps], { refreshInterval: 0 });
+  useRefreshOnEvent(refreshLeads);
 
-  const detailLines: string[] = [];
-  if (serviceLabel) detailLines.push(`Service: ${serviceLabel}`);
-  if (preferredDate) detailLines.push(`Preferred date: ${formatDateForMessage(preferredDate)}`);
-  if (eventTime) detailLines.push(`Event time: ${eventTime}`);
-  if (location) detailLines.push(`Location: ${location}`);
-  if (typeof partySize === "number") detailLines.push(`Party size: ${partySize}`);
-  if (addOns.length) detailLines.push(`Add-ons: ${addOns.join(", ")}`);
-  if (lead.stage) detailLines.push(`Stage: ${lead.stage}`);
-  if (lead.phone) detailLines.push(`Phone: ${lead.phone}`);
-  if (lead.email && lead.email !== EMAIL_PLACEHOLDER) detailLines.push(`Email: ${lead.email}`);
-  if (lead.source) detailLines.push(`Source: ${lead.source}`);
-  if (lead.intake?.skinType) detailLines.push(`Skin type: ${lead.intake.skinType}`);
-  if (lead.intake?.allergies) detailLines.push(`Allergies: ${lead.intake.allergies}`);
-  if (lead.intake?.style) detailLines.push(`Preferred style: ${lead.intake.style}`);
-  if (lead.intake?.refs) detailLines.push(`Reference links: ${lead.intake.refs}`);
+  const leadsRaw = leadsData ?? [];
+  const [leadsState, setLeadsState] = useState<DashboardLead[]>([]);
 
-  const extraNotes: string[] = [];
-  if (lead.internalNotes) extraNotes.push(`Internal notes: ${lead.internalNotes}`);
-  if (lead.intake?.notes) extraNotes.push(`Intake notes: ${lead.intake.notes}`);
-  if (Array.isArray(lead.notes)) {
-    lead.notes.slice(1).forEach((n: any) => {
-      if (!n?.text) return;
-      const timestamp =
-        (typeof n.at === "string" && n.at) || safeIso(n.at) || formatDateForMessage(n.at) || "";
-      extraNotes.push(timestamp ? `Note (${timestamp}): ${n.text}` : n.text);
+  useEffect(() => {
+    setLeadsState(leadsRaw.map(mapApiLeadToLegacy));
+  }, [leadsRaw]);
+
+  const recentLeads = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return leadsRaw.filter((lead) => new Date(lead.createdAt).getTime() >= cutoff);
+  }, [leadsRaw]);
+
+  const monthStart = useMemo(() => startOfMonth(visibleMonth), [visibleMonth]);
+  const monthEnd = useMemo(() => endOfMonth(visibleMonth), [visibleMonth]);
+  const monthKey = `${monthStart.toISOString()}_${monthEnd.toISOString()}`;
+
+  const {
+    data: appointmentsData,
+    refresh: refreshAppointments,
+  } = usePollingQuery<Appointment[]>(
+    () =>
+      listAppointments({
+        rangeStart: monthStart.toISOString(),
+        rangeEnd: monthEnd.toISOString(),
+      }),
+    [monthKey],
+    { refreshInterval: 0 },
+  );
+  useRefreshOnEvent(refreshAppointments);
+
+  const appointments = appointmentsData ?? [];
+  const calendarDensity = useMemo(() => buildEventDensity(appointments), [appointments]);
+  const dayAppointments = useMemo(
+    () => appointments.filter((appt) => isSameDay(new Date(appt.start), selectedDate)),
+    [appointments, selectedDate],
+  );
+  const appointmentsByDay = useMemo(() => {
+    const map: Record<string, Appointment[]> = {};
+    appointments.forEach((appointment) => {
+      const key = toDateKey(appointment.start);
+      if (!key) return;
+      if (!map[key]) map[key] = [];
+      map[key]!.push(appointment);
     });
-  }
+    Object.values(map).forEach((list) =>
+      list.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()),
+    );
+    return map;
+  }, [appointments]);
 
-  const sections = [
-    primary.trim(),
-    detailLines.join("\n").trim(),
-    extraNotes.join("\n").trim(),
-  ].filter(Boolean);
+  const handleOpenLead = useCallback((lead: DashboardLead) => {
+    setActiveLead(lead);
+    setLeadBaseline(lead);
+    setSaveError(null);
+  }, []);
 
-  return sections.length ? sections.join("\n\n") : null;
+  const handleSelectLeadFromApi = useCallback(
+    (apiLead: ApiLead) => {
+      const legacy = mapApiLeadToLegacy(apiLead);
+      handleOpenLead(legacy);
+    },
+    [handleOpenLead],
+  );
+
+  const handleLeadUpdateLocal = useCallback((updated: DashboardLead) => {
+    setActiveLead(updated);
+  }, []);
+
+  const handleLeadCreate = useCallback(
+    (created: DashboardLead) => {
+      setNewLeadModalOpen(false);
+      emitDashboardDataChange();
+        setLeadsState((prev) => [created, ...prev.filter((item) => item.id !== created.id)]);
+      handleOpenLead(created);
+      void refreshLeads();
+    },
+    [handleOpenLead, refreshLeads],
+  );
+
+  const handleQuickScheduleLead = useCallback(
+    (lead: ApiLead) => {
+      setEventLeadId(lead.id);
+      setCreateEventOpen(true);
+    },
+    [],
+  );
+
+  const handleLeadSave = useCallback(
+    async (draft: DashboardLead & Record<string, any>) => {
+      setSavingLead(true);
+      setSaveError(null);
+      try {
+        const payload = buildLeadUpdatePayload(draft);
+        await updateLead(draft.id, payload);
+        emitDashboardDataChange();
+        setLeadBaseline(draft);
+        setActiveLead(draft);
+        setLeadsState((prev) =>
+          prev.map((lead) => (lead.id === draft.id ? { ...lead, ...draft } : lead)),
+        );
+        void refreshLeads();
+      } catch (error) {
+        console.error("Failed to save lead", error);
+        setSaveError(error instanceof Error ? error.message : "Failed to save lead");
+      } finally {
+        setSavingLead(false);
+      }
+    },
+    [],
+  );
+
+  const handleSelectAppointment = useCallback(
+    (appointment: Appointment) => {
+      const start = new Date(appointment.start);
+      setSelectedDate(start);
+      setTab("appointments");
+    },
+    [setSelectedDate, setTab],
+  );
+
+  const handleSelectTask = useCallback(
+    (task: Task) => {
+      if (task.lead) {
+        const existing = leadsRaw.find((lead) => lead.id === task.lead?.id);
+        if (existing) {
+          handleSelectLeadFromApi(existing);
+        }
+      }
+      setTab("tasks");
+    },
+    [handleSelectLeadFromApi, leadsRaw, setTab],
+  );
+
+  const dashboardAppointments: DashboardAppointments = useMemo(
+    () => ({ byDate: calendarDensity, forSelectedDay: dayAppointments }),
+    [calendarDensity, dayAppointments],
+  );
+
+  const isLoadingLeads = leadsLoading && !leadsData;
+
+  return (
+    <div className="min-h-screen space-y-6">
+      <DashboardHeader
+        onOpenNewLead={() => {
+          setNewLeadsOpen(true);
+        }}
+        onAddLead={() => {
+          setNewLeadInitialDate(undefined);
+          setNewLeadModalOpen(true);
+        }}
+        onCreateEvent={() => setCreateEventOpen(true)}
+        onSelectLead={handleSelectLeadFromApi}
+        onSelectTask={handleSelectTask}
+        onSelectAppointment={handleSelectAppointment}
+      />
+
+      <StatsCards />
+
+      <section className="grid gap-6 lg:grid-cols-12">
+        <aside className="lg:col-span-3 space-y-4">
+          <PipelineSidebar />
+          <QuickFilters />
+        </aside>
+
+        <main className="lg:col-span-6 space-y-4">
+          <CenterTabs
+            tab={tab}
+            onTabChange={setTab}
+            leads={leadsState}
+            isLoadingLeads={isLoadingLeads}
+            onOpenLead={handleOpenLead}
+            appointments={dashboardAppointments.forSelectedDay}
+            calendarDensity={dashboardAppointments.byDate}
+            appointmentsByDay={appointmentsByDay}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onScheduleLead={handleQuickScheduleLead}
+            onCreateLeadForDay={() => {
+              setNewLeadInitialDate(selectedDate);
+              setNewLeadModalOpen(true);
+            }}
+          />
+        </main>
+
+        <aside className="lg:col-span-3 space-y-4">
+          <MonthWidget events={dashboardAppointments.byDate} appointmentsByDay={appointmentsByDay} />
+          <TodayPanel appointments={dashboardAppointments.forSelectedDay} onCreate={() => setCreateEventOpen(true)} />
+        </aside>
+      </section>
+
+      <NewLeadModal
+        open={newLeadModalOpen}
+        onClose={() => setNewLeadModalOpen(false)}
+        onCreate={handleLeadCreate}
+        initialDate={newLeadInitialDate}
+        stages={LEGACY_STAGES}
+        mapApiLead={(apiLead) => mapApiLeadToLegacy(apiLead)}
+      />
+
+      <CustomerModal
+        open={Boolean(activeLead)}
+        lead={activeLead}
+        onClose={() => setActiveLead(null)}
+        onUpdate={handleLeadUpdateLocal as any}
+        onSave={handleLeadSave as any}
+        canSave={Boolean(leadBaseline && activeLead && leadSnapshot(activeLead) !== leadSnapshot(leadBaseline))}
+        saving={savingLead}
+        saveError={saveError}
+      />
+
+      <CreateEventModal
+        open={createEventOpen}
+        onClose={() => {
+          setCreateEventOpen(false);
+          setEventLeadId(null);
+        }}
+        defaultDate={selectedDate}
+        defaultLeadId={eventLeadId}
+        onCreated={() => {
+          emitDashboardDataChange();
+          setCreateEventOpen(false);
+          setEventLeadId(null);
+          void refreshAppointments();
+        }}
+      />
+
+      <NewLeadsSheet
+        open={newLeadsOpen}
+        leads={recentLeads}
+        onClose={() => setNewLeadsOpen(false)}
+        onSelect={(lead) => {
+          setNewLeadsOpen(false);
+          handleSelectLeadFromApi(lead);
+        }}
+        onCreate={() => {
+          setNewLeadsOpen(false);
+          setNewLeadModalOpen(true);
+        }}
+      />
+    </div>
+  );
+}
+
+type DashboardHeaderProps = {
+  onOpenNewLead: () => void;
+  onAddLead: () => void;
+  onCreateEvent: () => void;
+  onSelectLead: (lead: ApiLead) => void;
+  onSelectTask: (task: Task) => void;
+  onSelectAppointment: (appointment: Appointment) => void;
 };
 
-const buildLeadUpdatePayload = (lead: Lead & Record<string, any>) => {
-  const email = lead.email?.trim() || EMAIL_PLACEHOLDER;
-  const eventDateIso =
-    safeIso(lead.dateOfService) ??
-    safeIso(lead.intake?.preferredDate ?? undefined) ??
-    null;
+function DashboardHeader({ onOpenNewLead, onAddLead, onCreateEvent, onSelectLead, onSelectTask, onSelectAppointment }: DashboardHeaderProps) {
+  return (
+    <div className="glass-strong sticky top-3 z-40 rounded-[--radius-xl] border border-[--color-border]/60 px-4 py-3 overflow-visible">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchBar onSelectLead={onSelectLead} onSelectTask={onSelectTask} onSelectAppointment={onSelectAppointment} />
+        <button
+          type="button"
+          onClick={onCreateEvent}
+          className="icon-chip rounded-[--radius-lg] px-3 py-2 text-sm"
+        >
+          Create event
+        </button>
+        <button
+          type="button"
+          onClick={onOpenNewLead}
+          className="gbtn rounded-[--radius-lg] px-3 py-2 text-sm"
+        >
+          New leads
+        </button>
+        <button
+          type="button"
+          onClick={onAddLead}
+          className="gbtn rounded-[--radius-lg] px-3 py-2 text-sm"
+        >
+          Add lead
+        </button>
+      </div>
+    </div>
+  );
+}
 
-  const message = buildMessageFromLead(lead);
-
-  return {
-    id: lead.id,
-    name: lead.name?.trim() || null,
-    email,
-    phone: lead.phone?.trim() || null,
-    eventDate: eventDateIso,
-    message,
-    source: lead.source?.trim() || null,
-  };
+type CenterTabsProps = {
+  tab: "leads" | "tasks" | "appointments" | "calendar";
+  onTabChange: (tab: "leads" | "tasks" | "appointments" | "calendar") => void;
+  leads: DashboardLead[];
+  isLoadingLeads: boolean;
+  onOpenLead: (lead: DashboardLead) => void;
+  appointments: Appointment[];
+  calendarDensity: CalendarEventDensity;
+  appointmentsByDay: Record<string, Appointment[]>;
+  selectedDate: Date;
+  onSelectDate: (date: Date) => void;
+  onScheduleLead: (lead: ApiLead) => void;
+  onCreateLeadForDay: () => void;
 };
 
-const leadSnapshot = (lead: Lead & Record<string, any>) =>
-  JSON.stringify({
-    ...buildLeadUpdatePayload(lead),
-    stage: lead.stage,
-  });
+function CenterTabs({
+  tab,
+  onTabChange,
+  leads,
+  isLoadingLeads,
+  onOpenLead,
+  appointments,
+  calendarDensity,
+  appointmentsByDay,
+  selectedDate,
+  onSelectDate,
+  onScheduleLead,
+  onCreateLeadForDay,
+}: CenterTabsProps) {
+  return (
+    <div className="space-y-4">
+      <div className="glass rounded-[--radius-xl] border border-[--color-border]/60 p-1 flex items-center gap-1">
+        {[{ id: "leads", label: "Leads" }, { id: "tasks", label: "Tasks" }, { id: "appointments", label: "Appointments" }, { id: "calendar", label: "Calendar" }].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onTabChange(item.id as CenterTabsProps["tab"]) }
+            className={`px-3 py-2 rounded-[--radius-lg] text-sm ${tab === item.id ? "gbtn" : "icon-chip"}`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
-const mapDbLead = (row: DbLead): Lead & Record<string, any> => {
-  const eventDateIso = safeIso(row.eventDate);
-  const { note, details } = parseMessageDetails(row.message ?? undefined);
+      {tab === "leads" && (
+        <div className="glass rounded-[--radius-xl] border border-[--color-border]/60 p-3">
+          <LeadList leads={leads} onOpen={onOpenLead} />
+          {isLoadingLeads ? (
+            <p className="mt-3 text-xs text-[--color-muted-foreground]">Loading leads…</p>
+          ) : null}
+        </div>
+      )}
 
-  const preferredDateIso = safeIso(details["preferred date"]);
-  const serviceLabel = details["service"] || undefined;
-  const eventTime = details["event time"] || undefined;
-  const location = details["location"] || undefined;
-  const partySizeText = details["party size"] || undefined;
-  const partySize = partySizeText
-    ? Number.parseInt(partySizeText.replace(/[^0-9]/g, ""), 10) || undefined
-    : undefined;
-  const addOns = details["add-ons"]
-    ? details["add-ons"]
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)
-    : undefined;
-  const stageRaw = details["stage"];
-  const normalizedStage =
-    typeof stageRaw === "string"
-      ? STAGES.find((s) => s.toLowerCase() === stageRaw.trim().toLowerCase())
-      : undefined;
-  const skinType = details["skin type"] || undefined;
-  const allergies = details["allergies"] || undefined;
-  const preferredStyle = details["preferred style"] || undefined;
-  const refs = details["reference links"] || undefined;
-  const intakeNotes = details["intake notes"] || undefined;
-  const internalNotes = details["internal notes"] || undefined;
+      {tab === "tasks" && <TasksList />}
 
-  const primaryNote = note || (row.message?.trim()?.length ? row.message : "");
+      {tab === "appointments" && <AppointmentsList appointments={appointments} />}
+
+      {tab === "calendar" && (
+        <div className="space-y-3">
+          <MonthWidget events={calendarDensity} appointmentsByDay={appointmentsByDay} />
+          <div className="glass rounded-[--radius-xl] border border-[--color-border]/60 p-3 space-y-3 text-sm overflow-visible">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="font-medium text-[--color-foreground]">{format(selectedDate, "PPP")}</div>
+              <button
+                type="button"
+                onClick={() => onSelectDate(new Date())}
+                className="icon-chip rounded-[--radius-md] px-3 py-1 text-xs"
+              >
+                Today
+              </button>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <LeadQuickSearch
+                onSelect={(lead) => {
+                  onScheduleLead(lead);
+                }}
+                className="w-full sm:w-72"
+                placeholder="Schedule existing lead"
+              />
+              <button
+                type="button"
+                onClick={onCreateLeadForDay}
+                className="gbtn rounded-[--radius-md] px-3 py-2 text-sm"
+              >
+                New lead for this day
+              </button>
+            </div>
+            {appointments.length === 0 ? (
+              <p className="text-[--color-muted-foreground]">No events scheduled yet — use the quick actions above to book this day.</p>
+            ) : (
+              <ul className="space-y-2">
+                {appointments.map((event) => (
+                  <li
+                    key={event.id}
+                    className="rounded-[--radius-lg] border border-[--color-border]/50 bg-[rgba(18,13,10,0.08)] px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-medium text-[--color-foreground]">{event.title}</div>
+                        <div className="text-xs text-[--color-muted-foreground]">
+                          {new Date(event.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          {event.location ? ` • ${event.location}` : ""}
+                        </div>
+                      </div>
+                      <span
+                        className="icon-chip px-2 py-0.5 rounded-[--radius-sm] text-[10px] font-semibold"
+                        style={{
+                          background: event.status === AppointmentStatusEnum.CONFIRMED || event.status === AppointmentStatusEnum.COMPLETED
+                            ? "color-mix(in srgb, var(--sage) 35%, transparent)"
+                            : event.status === AppointmentStatusEnum.TENTATIVE
+                              ? "color-mix(in srgb, var(--amber) 40%, transparent)"
+                              : "color-mix(in srgb, var(--destructive) 30%, transparent)",
+                        }}
+                      >
+                        {event.status?.toLowerCase() ?? "scheduled"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildLeadParams(
+  stage: LeadStage | null | undefined,
+  filters: string[],
+  search: string,
+  createdAfter?: string,
+) {
+  const params: Record<string, unknown> = {};
+  if (stage) params.stage = stage;
+  if (createdAfter) params.createdAfter = createdAfter;
+  if (filters.includes("awaiting-reply")) params.awaitingReply = true;
+  if (filters.includes("consult-requested")) params.consultRequested = true;
+  if (filters.includes("deposit-pending")) params.depositPending = true;
+  if (filters.includes("contract-pending")) params.contractPending = true;
+  if (filters.includes("high-budget")) params.highBudget = true;
+  if (search.trim()) params.search = search.trim();
+  return params;
+}
+
+function buildEventDensity(appointments: Appointment[]): CalendarEventDensity {
+  return appointments.reduce<CalendarEventDensity>((acc, appointment) => {
+    const key = toDateKey(appointment.start);
+    if (!key) return acc;
+    const status = appointment.status ?? AppointmentStatusEnum.TENTATIVE;
+    if (!acc[key]) acc[key] = {};
+    acc[key]![status] = (acc[key]![status] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+function mapApiLeadToLegacy(row: ApiLead): DashboardLead {
+  const stage = API_TO_LEGACY_STAGE[row.stage] ?? "uncontacted";
   const createdIso = safeIso(row.createdAt) ?? new Date().toISOString();
-  const noteEntry = primaryNote
+  const noteEntry = row.message
     ? [
         {
           id: `msg-${row.id}`,
-          text: primaryNote,
+          text: row.message,
           at: createdIso,
         },
       ]
     : [];
 
-  const intake: Record<string, any> = {
-    capturedAt: createdIso,
-  };
-  if (serviceLabel) intake.service = serviceLabel;
-  if (preferredDateIso) intake.preferredDate = preferredDateIso;
-  if (eventTime) intake.eventTime = eventTime;
-  if (location) intake.location = location;
-  if (typeof partySize === "number") intake.partySize = partySize;
-  if (addOns) intake.addOns = addOns;
-  if (primaryNote) intake.initialMessage = primaryNote;
-  if (skinType) intake.skinType = skinType;
-  if (allergies) intake.allergies = allergies;
-  if (preferredStyle) intake.style = preferredStyle;
-  if (refs) intake.refs = refs;
-  if (intakeNotes) intake.notes = intakeNotes;
-
   return {
     id: row.id,
-    name: row.name || "New inquiry",
-    email: row.email && row.email !== EMAIL_PLACEHOLDER ? row.email : undefined,
-    phone: row.phone || undefined,
-    stage: (normalizedStage ?? "uncontacted") as LeadStage,
+    name: row.name ?? "New inquiry",
+    email: row.email ?? undefined,
+    phone: row.phone ?? undefined,
+    stage,
     createdAt: createdIso,
-    dateOfService: eventDateIso ?? preferredDateIso,
-    eventTime,
-    location,
-    partySize,
-    eventType: serviceLabel,
-    tags: row.source ? [row.source] : [],
+    lastContactAt: row.lastOutboundAt ?? undefined,
+    dateOfService: row.eventDate ?? undefined,
     notes: noteEntry,
-    intake,
-    addOns,
-    internalNotes: internalNotes || undefined,
+    tags: [],
+    contracts: [],
+    invoices: [],
+    bookings: [],
     source: row.source ?? undefined,
-  } as Lead & Record<string, any>;
-};
+    internalNotes: null,
+    intake: {},
+    addOns: [],
+    intakeNotes: [],
+  } as DashboardLead;
+}
 
-type ViewMode = "calendar" | "leads" | "contracts" | "invoices" | "content";
-type SortMode = "alpha" | "bookingType" | "contacted" | "completed" | "upcoming" | "repeat";
-type TimeframeKey = "today" | "tomorrow" | "week";
+function safeIso(value: string | Date | null | undefined) {
+  if (!value) return undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
 
-const TIMEFRAME_OPTIONS: { value: TimeframeKey; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "week", label: "This Week" },
-];
+function buildLeadUpdatePayload(lead: DashboardLead & Record<string, any>) {
+  const primaryNote =
+    Array.isArray(lead.notes) &&
+    lead.notes.length > 0 &&
+    typeof lead.notes[0] === "object" &&
+    lead.notes[0] !== null &&
+    "text" in (lead.notes[0] as Record<string, unknown>)
+      ? (lead.notes[0] as { text?: string })
+      : null;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-export default function AdminDashboard() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [events] = useState<Appointment[]>(DEMO_EVENTS);
-  const [sales]  = useState<Sale[]>(DEMO_SALES);
-  const [isLoading, setIsLoading] = useState(true);
-  const [latestFetchError, setLatestFetchError] = useState<string | null>(null);
-
-  const [view, setView] = useState<ViewMode>("calendar");
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortMode>("alpha");
-  const [, setShowOverdue] = useState(false);
-  const [, setShowUnsigned] = useState(false);
-
-  // New lead modal
-  const [newOpen, setNewOpen] = useState(false);
-  const [newDate, setNewDate] = useState<Date | null>(null);
-  const [timeframe, setTimeframe] = useState<TimeframeKey>("today");
-
-  // Lead details modal
-  const [leadOpen, setLeadOpen] = useState(false);
-  const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const [leadBaseline, setLeadBaseline] = useState<(Lead & Record<string, any>) | null>(null);
-  const [savingLead, setSavingLead] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const openLead = (l: Lead) => {
-    setActiveLead(l);
-    setLeadBaseline(JSON.parse(JSON.stringify(l)) as Lead & Record<string, any>);
-    setSaveError(null);
-    setLeadOpen(true);
+  return {
+    name: lead.name,
+    email: lead.email ?? null,
+    phone: lead.phone ?? null,
+    stage: LEGACY_TO_API_STAGE[lead.stage as LegacyLeadStage] ?? LeadStageEnum.NEW,
+    eventDate: lead.dateOfService ?? null,
+    message: primaryNote?.text ?? null,
+    consultRequested: Boolean(lead.consultRequested),
+    depositPending: Boolean(lead.depositPending),
+    contractPending: Boolean(lead.contractPending),
+    highBudget: Boolean(lead.highBudget),
+    budgetCents:
+      typeof lead.budgetCents === "number" ? lead.budgetCents : undefined,
+    lastInboundAt: lead.lastInboundAt ?? null,
+    lastOutboundAt: lead.lastOutboundAt ?? null,
   };
-  const closeLead = () => {
-    if (activeLead && leadBaseline) {
-      const hasChanges =
-        leadSnapshot(activeLead as Lead & Record<string, any>) !== leadSnapshot(leadBaseline);
-      if (hasChanges) {
-        const reverted = JSON.parse(JSON.stringify(leadBaseline)) as Lead & Record<string, any>;
-        setLeads((prev) =>
-          prev.map((l) =>
-            l.id === activeLead.id ? reverted : l,
-          ),
-        );
-      }
-    }
-    setLeadOpen(false);
-    setActiveLead(null);
-    setLeadBaseline(null);
-    setSaveError(null);
-  };
+}
 
-  // Create & update helpers
-  const loadLeads = useCallback(async () => {
-    setIsLoading(true);
-    setLatestFetchError(null);
-    try {
-      const res = await fetch("/api/leads", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (json?.ok && Array.isArray(json.leads)) {
-        setLeads(json.leads.map(mapDbLead));
-      } else {
-        throw new Error(json?.error || "Unexpected response");
-      }
-    } catch (err) {
-      console.error("Failed to load leads", err);
-      setLeads(DEMO_LEADS);
-      setLatestFetchError("Live leads unavailable — showing demo data.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+function leadSnapshot(lead: DashboardLead & Record<string, any>) {
+  return JSON.stringify({
+    id: lead.id,
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    stage: lead.stage,
+    eventDate: lead.dateOfService ?? null,
+  });
+}
 
+function useRefreshOnEvent(refresh: () => Promise<void>) {
   useEffect(() => {
-    void loadLeads();
-  }, [loadLeads]);
-
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const custom = event as CustomEvent<Lead>;
-      if (custom?.detail) {
-        setActiveLead(custom.detail);
-        setLeadOpen(true);
-      }
+    const handler = () => {
+      void refresh();
     };
-    window.addEventListener("dashboard:navigateToLead", handler as EventListener);
-    return () => {
-      window.removeEventListener("dashboard:navigateToLead", handler as EventListener);
-    };
-  }, []);
+    window.addEventListener(DASHBOARD_DATA_EVENT, handler);
+    return () => window.removeEventListener(DASHBOARD_DATA_EVENT, handler);
+  }, [refresh]);
+}
 
-  const handleDayCreate = (date: Date) => { setNewDate(date); setNewOpen(true); };
-  const handleCreateLead = async (lead: Lead) => {
-    try {
-      const payload = {
-        name: lead.name,
-        email: lead.email,
-        phone: lead.phone,
-        eventDate: lead.dateOfService,
-        message: Array.isArray((lead as any).notes) && (lead as any).notes[0]?.text
-          ? (lead as any).notes[0].text
-          : undefined,
-        source: "admin-dashboard",
-      };
-      const res = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (json?.ok && json.lead) {
-        setLeads(prev => [mapDbLead(json.lead), ...prev]);
-      } else {
-        throw new Error(json?.error || "Unable to save lead");
-      }
-    } catch (err) {
-      console.error("Lead save failed, keeping local copy", err);
-      setLeads(prev => [lead, ...prev]);
-    } finally {
-      setNewOpen(false);
-    }
-  };
-  const handleUpdateLead = (patch: Lead) => {
-    setLeads(prev => prev.map(l => (l.id === patch.id ? { ...l, ...patch } : l)));
-    setActiveLead(patch);
-    setSaveError(null);
-  };
-  const handleDeleteLead = (id: string) => {
-    setLeads(prev => prev.filter(l => l.id !== id));
-    setLeadOpen(false);
-    setActiveLead(null);
-    setLeadBaseline(null);
-  };
-
-  const handleSaveLead = async (draft: Lead & Record<string, any>) => {
-    setSavingLead(true);
-    setSaveError(null);
-    try {
-      const payload = buildLeadUpdatePayload(draft);
-      const res = await fetch("/api/leads", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json?.ok || !json.lead) {
-        throw new Error(json?.error || `HTTP ${res.status}`);
-      }
-      const updated = mapDbLead(json.lead);
-      setLeads(prev => prev.map((l) => (l.id === updated.id ? updated : l)));
-      setActiveLead(updated);
-      setLeadBaseline(JSON.parse(JSON.stringify(updated)) as Lead & Record<string, any>);
-    } catch (err: any) {
-      console.error("Failed to save lead", err);
-      setSaveError(err?.message || "Failed to save lead");
-    } finally {
-      setSavingLead(false);
-    }
-  };
-
-  const isLeadDirty = useMemo(() => {
-    if (!activeLead || !leadBaseline) return false;
-    return (
-      leadSnapshot(activeLead as Lead & Record<string, any>) !== leadSnapshot(leadBaseline)
-    );
-  }, [activeLead, leadBaseline]);
-
-  // Filter + sort for Leads view
-  const visibleLeads = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let arr = leads.filter(l => {
-      if (!q) return true;
-      const hay = `${l.name ?? ""} ${l.email ?? ""} ${l.phone ?? ""}`.toLowerCase();
-      return hay.includes(q);
-    });
-
-    const dateOrNull = (d: any) =>
-      d ? new Date(d).getTime() : Number.NaN;
-    const stageRank = STAGES.reduce<Record<string, number>>((acc, stage, index) => {
-      acc[stage] = index;
-      return acc;
-    }, {});
-
-    arr.sort((a, b) => {
-      switch (sort) {
-        case "alpha":
-          return (a.name || "").localeCompare(b.name || "");
-        case "bookingType":
-          return (a as any).service?.localeCompare((b as any).service || "") || (a.name || "").localeCompare(b.name || "");
-        case "contacted":
-          return (b.lastContactAt ? 1 : 0) - (a.lastContactAt ? 1 : 0) ||
-                 dateOrNull(b.lastContactAt) - dateOrNull(a.lastContactAt);
-        case "completed":
-          return (b.stage === "completed" ? 1 : 0) - (a.stage === "completed" ? 1 : 0) ||
-                 (stageRank[a.stage] ?? 99) - (stageRank[b.stage] ?? 99);
-        case "upcoming":
-          return (dateOrNull(a.dateOfService) || 9e15) - (dateOrNull(b.dateOfService) || 9e15);
-        case "repeat":
-          const aRep = (a.tags || []).includes("repeat") ? 1 : 0;
-          const bRep = (b.tags || []).includes("repeat") ? 1 : 0;
-          return bRep - aRep || (a.name || "").localeCompare(b.name || "");
-        default:
-          return 0;
-      }
-    });
-
-    return arr;
-  }, [leads, search, sort]);
-
-  const timeframeConfig = useMemo(() => {
-    const now = new Date();
-    const todayStart = startOfDay(now);
-    switch (timeframe) {
-      case "today": {
-        const start = todayStart;
-        return {
-          start,
-          end: new Date(start.getTime() + DAY_MS),
-          label: "Today",
-          focusDate: start,
-          viewMode: "today" as const,
-        };
-      }
-      case "tomorrow": {
-        const start = new Date(todayStart.getTime() + DAY_MS);
-        return {
-          start,
-          end: new Date(start.getTime() + DAY_MS),
-          label: "Tomorrow",
-          focusDate: start,
-          viewMode: "today" as const,
-        };
-      }
-      case "week": {
-        const start = todayStart;
-        return {
-          start,
-          end: new Date(start.getTime() + 7 * DAY_MS),
-          label: "This Week",
-          focusDate: start,
-          viewMode: "month" as const,
-        };
-      }
-      default: {
-        const start = todayStart;
-        return {
-          start,
-          end: new Date(start.getTime() + DAY_MS),
-          label: "Today",
-          focusDate: start,
-          viewMode: "today" as const,
-        };
-      }
-    }
-  }, [timeframe]);
-
-  const filteredEvents = useMemo(() => {
-    const startMs = timeframeConfig.start.getTime();
-    const endMs = timeframeConfig.end.getTime();
-    return (events ?? []).filter((event) => {
-      const value = event?.start ?? (event as any)?.dateISO ?? (event as any)?.startAt;
-      if (!value) return false;
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return false;
-      const ms = date.getTime();
-      return ms >= startMs && ms < endMs;
-    });
-  }, [events, timeframeConfig]);
-
-  const filteredSales = useMemo(() => {
-    const startMs = timeframeConfig.start.getTime();
-    const endMs = timeframeConfig.end.getTime();
-    return (sales ?? []).filter((sale) => {
-      const value = sale?.createdAt;
-      if (!value) return false;
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return false;
-      const ms = date.getTime();
-      return ms >= startMs && ms < endMs;
-    });
-  }, [sales, timeframeConfig]);
-
-  const filteredLeadsForKPI = useMemo(() => {
-    const startMs = timeframeConfig.start.getTime();
-    const endMs = timeframeConfig.end.getTime();
-    return leads.filter((lead) => {
-      const value = lead?.dateOfService ?? lead?.createdAt;
-      if (!value) return false;
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return false;
-      const ms = date.getTime();
-      return ms >= startMs && ms < endMs;
-    });
-  }, [leads, timeframeConfig]);
-
-  return (
-    <div className="crm-shell section-y">
-      <div className="grid grid-cols-12 gap-3">
-        {/* LEFT: Sidebar (sticky on lg+) */}
-        <aside className="hidden lg:block col-span-3">
-          <div className="wglass-strong panel-lg side-shadow-right sticky top-[88px]">
-            <div className="text-sm font-semibold mb-2">Dashboard</div>
-            <nav className="grid gap-1">
-              {[
-                { id: "calendar",  label: "Calendar"  },
-                { id: "leads",     label: "Leads"     },
-                { id: "contracts", label: "Contracts" },
-                { id: "invoices",  label: "Invoices"  },
-                { id: "content",   label: "Content"   },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setView(t.id as ViewMode)}
-                  className={[
-                    "h-10 rounded-xl px-3 text-sm text-left border transition",
-                    view === (t.id as ViewMode)
-                      ? "bg-primary/15 border-border/70"
-                      : "border-border/60 hover:bg-accent/15"
-                  ].join(" ")}
-                >
-                  {t.label}
-                </button>
-              ))}
-
-              <div className="h-px bg-border/60 my-2" />
-
-              <button
-                onClick={() => { setNewDate(null); setNewOpen(true); }}
-                className="gbtn h-10 rounded-xl px-3 text-sm"
-              >
-                + New lead
-              </button>
-            </nav>
-          </div>
-        </aside>
-
-        {/* RIGHT: Main content */}
-        <section className="col-span-12 lg:col-span-9 grid gap-3">
-          <div className="wglass panel">
-            <HeaderAlerts
-              leads={leads}
-              onOpenOverdue={() => setShowOverdue(true)}
-              onOpenUnsigned={() => setShowUnsigned(true)}
-            />
-          </div>
-
-          <div className="wglass panel">
-            <KPIStrip
-              events={filteredEvents}
-              sales={filteredSales}
-              leads={filteredLeadsForKPI}
-              timeframeLabel={timeframeConfig.label}
-            />
-          </div>
-
-          <div className="wglass panel flex flex-wrap items-center gap-2">
-            <div className="mr-auto flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  className={`h-9 rounded-xl px-3 text-sm border ${view === "calendar" ? "bg-primary/15 border-border/70" : "border-border/60 hover:bg-accent/20"}`}
-                  onClick={() => setView("calendar")}
-                >
-                  Calendar
-                </button>
-                <button
-                  className={`h-9 rounded-xl px-3 text-sm border ${view === "leads" ? "bg-primary/15 border-border/70" : "border-border/60 hover:bg-accent/20"}`}
-                  onClick={() => setView("leads")}
-                >
-                  Leads
-                </button>
-              </div>
-
-              {view === "calendar" && (
-                <div className="flex flex-wrap items-center gap-1">
-                  {TIMEFRAME_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setTimeframe(option.value)}
-                      className={[
-                        "h-9 rounded-xl px-3 text-sm border transition",
-                        timeframe === option.value
-                          ? "bg-primary/15 border-border/70"
-                          : "border-border/60 hover:bg-accent/20",
-                      ].join(" ")}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {view === "leads" && (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search name, email, phone…"
-                  className="crm-input w-[200px] sm:w-[260px]"
-                />
-                <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortMode)}
-                  className="crm-input w-[180px]"
-                >
-                  <option value="alpha">Sort: A → Z</option>
-                  <option value="bookingType">Sort: Booking type</option>
-                  <option value="contacted">Sort: Contacted</option>
-                  <option value="completed">Sort: Completed</option>
-                  <option value="upcoming">Sort: Upcoming</option>
-                  <option value="repeat">Sort: Repeat customers</option>
-                </select>
-                <button
-                  onClick={() => void loadLeads()}
-                  className="h-9 rounded-xl border border-border/60 px-3 text-sm hover:bg-accent/15"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Refreshing…" : "Refresh"}
-                </button>
-              </div>
-            )}
-
-            <button
-              className="gbtn h-9 rounded-xl px-3 text-sm lg:hidden"
-              onClick={() => { setNewDate(null); setNewOpen(true); }}
-            >
-              + New lead
-            </button>
-          </div>
-
-          {view === "calendar" && (
-            <div className="wglass panel-lg">
-              <CalendarIOS
-                events={filteredEvents}
-                leads={leads}
-                focusDate={timeframeConfig.focusDate}
-                viewMode={timeframeConfig.viewMode}
-                rangeLabel={timeframeConfig.label}
-                onRequestTimeframeChange={setTimeframe}
-                onEventOpen={(e) => {
-                  if (e.leadId) {
-                    const found = leads.find(l => l.id === e.leadId);
-                    if (found) openLead(found);
-                  }
-                }}
-                onDayCreate={(d) => handleDayCreate(d)}
-              />
-            </div>
-          )}
-
-          {latestFetchError && (
-            <div className="wglass panel text-sm text-amber-200 border border-amber-300/40 bg-amber-500/10">
-              {latestFetchError}
-            </div>
-          )}
-
-          {view === "leads" && (
-            <div className="wglass panel-lg">
-              <LeadList leads={visibleLeads} onOpen={openLead} />
-              {isLoading && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Loading latest leads…
-                </p>
-              )}
-            </div>
-          )}
-
-          {view !== "calendar" && view !== "leads" && (
-            <div className="wglass panel-lg text-sm text-muted-foreground">
-              {view === "contracts" && "Contracts view — wire up your contract list here"}
-              {view === "invoices"  && "Invoices view — wire up your invoice list here"}
-              {view === "content"   && "Content view — add/upload your guides & products here"}
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* New lead modal */}
-      <NewLeadModal
-        open={newOpen}
-        onClose={() => setNewOpen(false)}
-        initialDate={newDate ?? undefined}
-        onCreate={handleCreateLead}
-      />
-
-      {/* Lead details modal */}
-      <CustomerModal
-        open={leadOpen}
-        lead={activeLead}
-        onClose={closeLead}
-        onUpdate={handleUpdateLead}
-        onDelete={handleDeleteLead}
-        onSave={handleSaveLead}
-        canSave={isLeadDirty}
-        saving={savingLead}
-        saveError={saveError}
-      />
-    </div>
-  );
+function toDateKey(value: string | Date | null | undefined) {
+  if (!value) return null;
+  const date =
+    typeof value === "string"
+      ? parseISO(value)
+      : value instanceof Date
+        ? value
+        : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return format(date, "yyyy-MM-dd");
 }

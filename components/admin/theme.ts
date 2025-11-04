@@ -1,24 +1,3 @@
-// components/admin/theme.ts
-// Uses your globals.css tokens; heuristics color stages by name (works with custom stages)
-import type { LeadStage, LeadCategory } from './types';
-
-export const CATEGORY_DOT: Record<LeadCategory | 'both', string> = {
-  service: 'bg-[color:var(--amber,#b45309)]',
-  guide:   'bg-[color:var(--teal,#0f766e)]',
-  both:    'bg-[color:var(--gold,#C6A25A)]',
-};
-
-// Heuristic badge based on stage text (lowercased)
-export function badgeClasses(stage: LeadStage, custom?: string) {
-  if (custom) return custom;
-  const s = (stage || '').toLowerCase();
-  if (s.includes('book'))     return 'bg-[color:var(--sage,#008767)]/18 text-[color:var(--sage,#008767)]';
-  if (s.includes('deposit'))  return 'bg-accent/25 text-foreground';
-  if (s.includes('trial'))    return 'bg-card text-foreground';
-  if (s.includes('confirm'))  return 'bg-accent/25 text-accent-foreground';
-  if (s.includes('change'))   return 'bg-popover text-foreground';
-  if (s.includes('complete')) return 'bg-card text-foreground';
-  if (s.includes('no') && s.includes('show')) return 'bg-destructive/15 text-destructive';
-  if (s.includes('lost'))     return 'bg-destructive/25 text-destructive-foreground';
-  return 'bg-muted text-muted-foreground';
-}
+export const badgeClasses="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium";
+export const badgeVariant=(variant?:"default"|"green"|"red"|"blue"|"yellow"|"gray")=>{switch(variant){case"green":return badgeClasses+" bg-green-100 text-green-800 border-green-200";case"red":return badgeClasses+" bg-red-100 text-red-800 border-red-200";case"blue":return badgeClasses+" bg-blue-100 text-blue-800 border-blue-200";case"yellow":return badgeClasses+" bg-yellow-100 text-yellow-800 border-yellow-200";case"gray":return badgeClasses+" bg-gray-100 text-gray-800 border-gray-200";default:return badgeClasses+" bg-neutral-100 text-neutral-800 border-neutral-200"}};
+export const cx=(...classes:Array<string|false|null|undefined>)=>classes.filter(Boolean).join(" ");
