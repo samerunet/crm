@@ -38,6 +38,8 @@ import type { Lead as LegacyLead, LeadStage as LegacyLeadStage } from "./types";
 import { STAGES as LEGACY_STAGES } from "./types";
 import { DASHBOARD_DATA_EVENT, emitDashboardDataChange } from "@/lib/dashboard/events";
 
+const EMPTY_LEADS: ApiLead[] = [];
+
 const API_TO_LEGACY_STAGE = {
   [LeadStageEnum.NEW]: "uncontacted",
   [LeadStageEnum.CONTACTED]: "contacted",
@@ -129,11 +131,12 @@ function DashboardShell() {
   } = usePollingQuery<ApiLead[]>(() => listLeads(leadParams), [leadDeps], { refreshInterval: 0 });
   useRefreshOnEvent(refreshLeads);
 
-  const leadsRaw = leadsData ?? [];
+  const leadsRaw = leadsData ?? EMPTY_LEADS;
   const [leadsState, setLeadsState] = useState<DashboardLead[]>([]);
 
   useEffect(() => {
-    setLeadsState(leadsRaw.map(mapApiLeadToLegacy));
+    const mapped = leadsRaw.map(mapApiLeadToLegacy);
+    setLeadsState((prev) => (areLeadArraysEqual(prev, mapped) ? prev : mapped));
   }, [leadsRaw]);
 
   const recentLeads = useMemo(() => {
@@ -668,4 +671,16 @@ function toDateKey(value: string | Date | null | undefined) {
         : new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return format(date, "yyyy-MM-dd");
+}
+
+function areLeadArraysEqual(prev: DashboardLead[], next: DashboardLead[]) {
+  if (prev === next) return true;
+  if (prev.length !== next.length) return false;
+  for (let index = 0; index < prev.length; index += 1) {
+    const prevLead = prev[index];
+    const nextLead = next[index];
+    if (prevLead.id !== nextLead.id) return false;
+    if (leadSnapshot(prevLead as any) !== leadSnapshot(nextLead as any)) return false;
+  }
+  return true;
 }
