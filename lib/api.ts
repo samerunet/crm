@@ -132,6 +132,8 @@ export type Contract = {
   status: ContractStatus;
   sentAt: string | null;
   signedAt: string | null;
+  externalRef: string | null;
+  fileUrl: string | null;
   createdAt: string;
   updatedAt: string;
   lead?: { id: string; name: string | null } | null;
@@ -202,6 +204,7 @@ export async function listAppointments(params: ListAppointmentsParams = {}): Pro
 
 export type ListContractsParams = {
   status?: ContractStatus | ContractStatus[];
+  leadId?: string;
 };
 
 export async function listContracts(params: ListContractsParams = {}): Promise<Contract[]> {

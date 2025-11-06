@@ -12,9 +12,17 @@ export async function GET(request: NextRequest) {
       .filter((value): value is keyof typeof ContractStatus => value in ContractStatus)
       .map((value) => ContractStatus[value]);
 
-    const where: Prisma.ContractWhereInput | undefined = statuses.length
-      ? { status: { in: statuses } }
-      : undefined;
+    const leadId = searchParams.get("leadId");
+
+    const filters: Prisma.ContractWhereInput[] = [];
+    if (statuses.length) {
+      filters.push({ status: { in: statuses } });
+    }
+    if (leadId) {
+      filters.push({ leadId });
+    }
+
+    const where = filters.length ? { AND: filters } : undefined;
 
     const contracts = await prisma.contract.findMany({
       where,

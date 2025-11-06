@@ -3,6 +3,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Lead, STAGES } from "./types";
+import ContractTab from "@/components/lead/ContractTab";
 
 /** Local shapes stored on the Lead object (kept inline so you don't have to edit types.ts now) */
 type AnyLead = Lead & Record<string, any>;
@@ -185,43 +186,46 @@ export default function CustomerModal({
             )}
 
             {tab === "contracts" && (
-              <ContractsView
-                model={model}
-                onCreate={() => {
-                  // prefill from details
-                  const services = [
-                    ...(model.services ?? []) // if you already store a services array on the lead
-                  ] as Array<{ name: string; price: number }>;
-                  const subtotal = services.reduce((s, x) => s + (x.price || 0), 0);
-                  const travel = Number(model.travelFee ?? 0);
-                  const discount = Number(model.discount ?? 0);
-                  const total = Math.max(0, subtotal + travel - discount);
+              <div className="space-y-5">
+                <ContractTab leadId={model.id} />
+                <ContractsView
+                  model={model}
+                  onCreate={() => {
+                    // prefill from details
+                    const services = [
+                      ...(model.services ?? []),
+                    ] as Array<{ name: string; price: number }>;
+                    const subtotal = services.reduce((s, x) => s + (x.price || 0), 0);
+                    const travel = Number(model.travelFee ?? 0);
+                    const discount = Number(model.discount ?? 0);
+                    const total = Math.max(0, subtotal + travel - discount);
 
-                  const rec: ContractRec = {
-                    id: `c_${Date.now()}`,
-                    createdAt: new Date().toISOString(),
-                    status: "draft",
-                    eventType: model.eventType || "",
-                    serviceDate: toISODate(model.dateOfService as any),
-                    partySize: Number(model.partySize ?? 0) || undefined,
-                    location: model.location || "",
-                    services: services.length
-                      ? services
-                      : [
-                          { name: "Bridal Makeup", price: Number(model.bridalPrice ?? 380) },
-                        ],
-                    subtotal: services.length ? subtotal : Number(model.bridalPrice ?? 380),
-                    travelFee: travel,
-                    discount,
-                    total,
-                    notes: model.internalNotes || "",
-                  };
+                    const rec: ContractRec = {
+                      id: `c_${Date.now()}`,
+                      createdAt: new Date().toISOString(),
+                      status: "draft",
+                      eventType: (model as AnyLead).eventType || "",
+                      serviceDate: toISODate(model.dateOfService as any),
+                      partySize: Number((model as AnyLead).partySize ?? 0) || undefined,
+                      location: (model as AnyLead).location || "",
+                      services: services.length
+                        ? services
+                        : [
+                            { name: "Bridal Makeup", price: Number((model as AnyLead).bridalPrice ?? 380) },
+                          ],
+                      subtotal: services.length ? subtotal : Number((model as AnyLead).bridalPrice ?? 380),
+                      travelFee: travel,
+                      discount,
+                      total,
+                      notes: model.internalNotes || "",
+                    };
 
-                  pushTo("contracts", rec);
-                }}
-                onUpdate={(id, patch) => updateIn("contracts", id, patch)}
-                onRemove={(id) => removeFrom("contracts", id)}
-              />
+                    pushTo("contracts", rec);
+                  }}
+                  onUpdate={(id, patch) => updateIn("contracts", id, patch)}
+                  onRemove={(id) => removeFrom("contracts", id)}
+                />
+              </div>
             )}
 
             {tab === "invoices" && (

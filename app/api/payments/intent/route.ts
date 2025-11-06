@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: '2024-06-20' })
+import { stripe } from "@/lib/stripe"
 
 export async function POST(req: Request){
   try{
+    if (!stripe) {
+      return NextResponse.json({ error: "Stripe secret key not configured" }, { status: 500 });
+    }
     const { product } = await req.json().catch(()=>({}))
     const amount = 2999
     const paymentIntent = await stripe.paymentIntents.create({
