@@ -187,7 +187,7 @@ export default function CustomerModal({
 
             {tab === "contracts" && (
               <div className="space-y-5">
-                <ContractTab leadId={model.id} />
+                <ContractTab leadId={model.id} lead={model as any} />
                 <ContractsView
                   model={model}
                   onCreate={() => {

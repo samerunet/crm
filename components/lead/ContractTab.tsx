@@ -4,9 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 
 import { listContracts, type Contract } from "@/lib/api";
+import type { Lead as AdminLead } from "@/components/admin/types";
+import { renderHollywoodStyleContract } from "@/components/admin/contractTemplates";
+import DownloadContractPDF from "@/components/DownloadContractPDF";
+
+type ContractLead = AdminLead & Record<string, any>;
 
 type Props = {
   leadId: string;
+  lead: ContractLead;
   defaultTemplateId?: string;
 };
 
@@ -17,7 +23,7 @@ type SendState = {
   error: string | null;
 };
 
-export default function ContractTab({ leadId, defaultTemplateId }: Props) {
+export default function ContractTab({ leadId, lead, defaultTemplateId }: Props) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [sendState, setSendState] = useState<SendState>({
@@ -53,6 +59,55 @@ export default function ContractTab({ leadId, defaultTemplateId }: Props) {
         ["VOID", "bg-[rgba(90,55,37,0.18)] text-[--destructive]"],
       ]),
     [],
+  );
+
+  const previewItems = useMemo(() => {
+    const services = Array.isArray((lead as ContractLead).services) ? (lead as ContractLead).services : null;
+    if (!services || !services.length) return undefined;
+    return services
+      .map((service) => {
+        if (!service) return null;
+        const label = typeof service.name === "string" && service.name.trim().length ? service.name.trim() : "Service";
+        const priceValue =
+          typeof service.price === "number"
+            ? service.price
+            : Number.isFinite(Number(service.price))
+              ? Number(service.price)
+              : null;
+        const priceText =
+          typeof service.price === "string" && service.price.trim().length
+            ? service.price
+            : priceValue !== null
+              ? `$${priceValue.toFixed(2)}`
+              : "$0.00";
+        return { label, priceText };
+      })
+      .filter(Boolean) as Array<{ label: string; priceText: string }>;
+  }, [lead]);
+
+  const previewDeposit = useMemo(() => {
+    const candidateFields = [
+      (lead as ContractLead).depositAmount,
+      (lead as ContractLead).deposit,
+      (lead as ContractLead).contracts?.[0]?.depositAmount,
+    ];
+    const candidate = candidateFields.find(
+      (value): value is number => typeof value === "number" && Number.isFinite(value),
+    );
+    if (typeof candidate === "number") return candidate;
+    if (typeof (lead as ContractLead).budgetCents === "number" && (lead as ContractLead).budgetCents > 0) {
+      return Math.max(100, Math.round(((lead as ContractLead).budgetCents / 100) * 0.25));
+    }
+    return undefined;
+  }, [lead]);
+
+  const contractPreviewHtml = useMemo(
+    () =>
+      renderHollywoodStyleContract(lead as any, {
+        items: previewItems,
+        depositAmount: previewDeposit,
+      }),
+    [lead, previewItems, previewDeposit],
   );
 
   const sendContract = useCallback(async () => {
@@ -106,6 +161,13 @@ export default function ContractTab({ leadId, defaultTemplateId }: Props) {
           >
             {sendState.loading ? "Sending…" : "Send Contract"}
           </button>
+          <DownloadContractPDF
+            lead={lead}
+            options={{
+              depositAmount: previewDeposit,
+              items: previewItems,
+            }}
+          />
         </div>
 
         {sendState.message && <p className="text-sm text-[--color-foreground]/80">{sendState.message}</p>}
@@ -211,6 +273,25 @@ export default function ContractTab({ leadId, defaultTemplateId }: Props) {
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="glass rounded-[--radius-xl] border border-[--color-border]/60 p-4 shadow-[0_16px_40px_rgba(18,13,10,0.16)] space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[--color-foreground]">Contract Preview</div>
+            <p className="text-xs opacity-75">
+              Generated from the client profile. Update lead details or services to refresh.
+            </p>
+          </div>
+          <span className="icon-chip rounded-[--radius-md] px-3 py-1 text-xs">Template</span>
+        </div>
+        <div className="rounded-[--radius-lg] border border-[--color-border]/40 bg-[rgba(18,13,10,0.04)] p-3 max-h-[460px] overflow-auto">
+          <div
+            className="prose prose-sm max-w-none bg-white text-black rounded-[--radius-lg] shadow-[0_12px_32px_rgba(0,0,0,0.18)]"
+            style={{ padding: "1.25rem" }}
+            dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
+          />
+        </div>
       </div>
     </div>
   );
