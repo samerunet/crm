@@ -158,13 +158,13 @@ export default function SearchBar({ onSelectLead, onSelectTask, onSelectAppointm
             }
           }}
           placeholder="Search leads, tasks, appointments…"
-          className="w-full glass rounded-lg px-3 py-2 border outline-none text-sm"
+          className="w-full glass-strong rounded-[calc(var(--radius)+14px)] border border-[--color-border]/40 px-4 py-2.5 text-sm outline-none shadow-[0_18px_40px_rgba(18,13,10,0.18)]"
           aria-label="Search"
         />
         <button type="submit" className="hidden" aria-hidden="true" />
       </form>
       {open && (
-        <div className="absolute left-0 right-0 top-full z-[120] mt-2 rounded-[--radius-xl] border border-[--color-border]/60 bg-[--color-card] shadow-[0_24px_60px_rgba(0,0,0,0.32)]">
+        <div className="glass-strong absolute left-0 right-0 top-full z-[120] mt-2 rounded-[calc(var(--radius)+12px)] border border-[--color-border]/50 shadow-[0_32px_80px_rgba(18,13,10,0.3)]">
           {loading ? (
             <div className="space-y-2 p-4">
               <div className={`${shimmer} h-4 w-1/2 rounded`} />

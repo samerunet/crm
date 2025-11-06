@@ -23,7 +23,7 @@ type AppointmentsListProps = {
 
 export default function AppointmentsList({ appointments }: AppointmentsListProps) {
   return (
-    <div className="glass rounded-[--radius-xl] border border-[--color-border]/60">
+    <div className="glass-strong rounded-[calc(var(--radius)+12px)] border border-[--color-border]/50 shadow-[0_20px_48px_rgba(18,13,10,0.18)]">
       <header className="flex items-center justify-between gap-3 border-b border-[--color-border]/40 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-[--color-muted-foreground]">
         <span>Appointments</span>
         <span className="icon-chip rounded-md px-2 py-1 text-xs">{appointments.length}</span>

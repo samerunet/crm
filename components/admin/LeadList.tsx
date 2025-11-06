@@ -44,7 +44,7 @@ export default function LeadList({
 }) {
   if (!leads?.length) {
     return (
-      <div className="glass rounded-[--radius-xl] border border-dashed border-[--color-border]/60 px-4 py-6 text-center text-sm text-[--color-muted-foreground]">
+      <div className="glass-strong rounded-[calc(var(--radius)+12px)] border border-dashed border-[--color-border]/60 px-4 py-6 text-center text-sm text-[--color-muted-foreground]">
         No leads match your filters yet.
       </div>
     );
@@ -58,9 +58,11 @@ export default function LeadList({
           type="button"
           onClick={() => onOpen?.(lead)}
           className={[
-            "glass text-left transition",
-            compact ? "rounded-[--radius-lg] px-3 py-2" : "rounded-[--radius-xl] px-4 py-3",
-            "border border-[--color-border]/50 hover:border-[--color-border] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[--color-ring]",
+            "glass-strong text-left transition",
+            compact
+              ? "rounded-[calc(var(--radius)+6px)] px-3 py-2"
+              : "rounded-[calc(var(--radius)+12px)] px-4 py-3",
+            "border border-[--color-border]/50 shadow-[0_16px_38px_rgba(18,13,10,0.18)] hover:border-[--color-border] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[--color-ring]",
           ]
             .filter(Boolean)
             .join(" ")}

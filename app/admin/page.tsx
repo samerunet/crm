@@ -8,5 +8,11 @@ export const metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminDashboard />;
+  return (
+    <div className="f-container section-y">
+      <div className="glass-strong rounded-[calc(var(--radius)+18px)] border border-[--color-border]/40 p-6 shadow-[0_32px_80px_rgba(18,13,10,0.22)] md:p-10">
+        <AdminDashboard />
+      </div>
+    </div>
+  );
 }

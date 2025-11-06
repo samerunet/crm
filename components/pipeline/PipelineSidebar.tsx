@@ -28,7 +28,7 @@ export default function PipelineSidebar() {
   const counts = useMemo(() => data ?? {}, [data]);
 
   return (
-    <aside className="glass rounded-[--radius-xl] border border-[--color-border]/60">
+    <aside className="glass-strong rounded-[calc(var(--radius)+14px)] border border-[--color-border]/50 shadow-[0_20px_48px_rgba(18,13,10,0.18)]">
       <header className="border-b border-[--color-border]/40 px-4 py-3 font-medium text-[--color-foreground]">
         Pipeline
       </header>
@@ -42,13 +42,13 @@ export default function PipelineSidebar() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setStage(selected ? null : item.id)}
-                className={`flex w-full items-center justify-between gap-2 rounded-[--radius-lg] px-3 py-2 text-sm transition ${
-                  selected ? "bg-[rgba(18,13,10,0.16)] text-[--color-foreground]" : "hover:bg-[rgba(18,13,10,0.08)]"
+                className={`flex w-full items-center justify-between gap-2 rounded-[calc(var(--radius)+6px)] px-3 py-2 text-sm transition ${
+                  selected ? "bg-[rgba(18,13,10,0.22)] text-[--color-foreground]" : "hover:bg-[rgba(18,13,10,0.08)]"
                 }`}
               >
                 <span>{item.label}</span>
                 <span
-                  className={`icon-chip rounded-md px-2 py-1 text-xs ${selected ? "bg-[--color-primary] text-[--color-primary-foreground]" : ""}`}
+                  className={`icon-chip rounded-[calc(var(--radius)+4px)] px-2 py-1 text-xs ${selected ? "bg-[--color-primary] text-[--color-primary-foreground]" : ""}`}
                 >
                   {isLoading && !data ? <span className={`${shimmer} inline-block h-3 w-6 rounded`} /> : count}
                 </span>

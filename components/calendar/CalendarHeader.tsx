@@ -14,7 +14,7 @@ export default function CalendarHeader({ onToday }: { onToday?: () => void } = {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[--radius-lg] border border-[--color-border]/60 bg-[--color-card] px-4 py-3">
+    <div className="glass-strong flex flex-wrap items-center justify-between gap-3 rounded-[calc(var(--radius)+10px)] border border-[--color-border]/50 px-4 py-3 shadow-[0_16px_40px_rgba(18,13,10,0.16)]">
       <div>
         <div className="text-xs font-semibold uppercase tracking-wide text-[--color-muted-foreground]">
           Calendar

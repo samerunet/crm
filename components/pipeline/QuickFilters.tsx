@@ -16,7 +16,7 @@ export default function QuickFilters() {
   const active = new Set(filters);
 
   return (
-    <aside className="glass rounded-[--radius-xl] border border-[--color-border]/60 p-4">
+    <aside className="glass-strong rounded-[calc(var(--radius)+14px)] border border-[--color-border]/50 p-4 shadow-[0_20px_48px_rgba(18,13,10,0.18)]">
       <header className="mb-3 font-medium text-[--color-foreground]">Quick filters</header>
       <div className="flex flex-wrap gap-2">
         {FILTER_KEYS.map((key) => (

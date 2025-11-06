@@ -8,16 +8,25 @@ import { useState } from "react";
 type MonthWidgetProps = {
   events?: EventDensity;
   appointmentsByDay?: Record<string, Appointment[]>;
+  leadsByDay?: Record<string, Array<{ id: string; stage: string; label: string }>>;
+  stageColors?: Record<string, string>;
+  onSelectDate?: (date: Date) => void;
 };
 
-export default function MonthWidget({ events, appointmentsByDay }: MonthWidgetProps) {
+export default function MonthWidget({ events, appointmentsByDay, leadsByDay, stageColors, onSelectDate }: MonthWidgetProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="space-y-3">
-      <CalendarHeader />
+      <CalendarHeader onToday={() => onSelectDate?.(new Date())} />
       <div className="hidden sm:block">
-        <MonthGrid events={events} appointmentsByDay={appointmentsByDay} />
+        <MonthGrid
+          events={events}
+          appointmentsByDay={appointmentsByDay}
+          leadsByDay={leadsByDay}
+          stageColors={stageColors}
+          onSelectDate={onSelectDate}
+        />
       </div>
       <div className="sm:hidden">
         <button
@@ -40,7 +49,16 @@ export default function MonthWidget({ events, appointmentsByDay }: MonthWidgetPr
                   Close
                 </button>
               </div>
-              <MonthGrid events={events} appointmentsByDay={appointmentsByDay} />
+              <MonthGrid
+                events={events}
+                appointmentsByDay={appointmentsByDay}
+                leadsByDay={leadsByDay}
+                stageColors={stageColors}
+                onSelectDate={(date) => {
+                  onSelectDate?.(date);
+                  setMobileOpen(false);
+                }}
+              />
             </div>
           </div>
         ) : null}

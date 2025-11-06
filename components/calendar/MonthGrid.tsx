@@ -32,15 +32,17 @@ const APPOINTMENT_BORDER: Record<AppointmentStatus, string> = {
 type MonthGridProps = {
   events?: EventDensity;
   appointmentsByDay?: Record<string, Appointment[]>;
+  leadsByDay?: Record<string, Array<{ id: string; stage: string; label: string }>>;
+  stageColors?: Record<string, string>;
   onSelectDate?: (date: Date) => void;
 };
 
-export default function MonthGrid({ events = {}, appointmentsByDay = {}, onSelectDate }: MonthGridProps) {
+export default function MonthGrid({ events = {}, appointmentsByDay = {}, leadsByDay = {}, stageColors = {}, onSelectDate }: MonthGridProps) {
   const { visibleMonth, selectedDate, setSelectedDate } = useCalendarContext();
   const days = getMonthGrid(visibleMonth);
 
   return (
-    <div role="grid" aria-label="Calendar month grid" className="glass rounded-[--radius-xl] p-2">
+    <div role="grid" aria-label="Calendar month grid" className="glass-strong rounded-[calc(var(--radius)+12px)] border border-[--color-border]/50 p-2 shadow-[0_18px_44px_rgba(18,13,10,0.16)]">
       <div className="grid grid-cols-7 text-xs opacity-80 px-2 pb-2">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
           <div key={label} className="text-center">
@@ -59,6 +61,8 @@ export default function MonthGrid({ events = {}, appointmentsByDay = {}, onSelec
           const visualStyle = !selected && !outOfMonth ? DAY_VISUAL_STYLES[dayStatus] : undefined;
           const appointments = appointmentsByDay[iso] ?? [];
           const visibleAppointments = appointments.slice(0, 2);
+          const dayLeads = leadsByDay[iso] ?? [];
+          const leadBadges = dayLeads.slice(0, 3);
 
           return (
             <button
@@ -69,7 +73,7 @@ export default function MonthGrid({ events = {}, appointmentsByDay = {}, onSelec
                 onSelectDate?.(date);
               }}
               className={[
-                "relative flex h-24 flex-col rounded-[--radius-md] border px-2 py-1.5 text-left text-xs transition sm:h-28",
+                "relative flex h-24 flex-col rounded-[calc(var(--radius)+4px)] border px-2 py-1.5 text-left text-xs transition sm:h-28",
                 outOfMonth ? "opacity-60" : "",
                 selected
                   ? "border-[--color-primary] bg-[--color-card] text-[--color-foreground]"
@@ -82,7 +86,14 @@ export default function MonthGrid({ events = {}, appointmentsByDay = {}, onSelec
                 <span>
                   {today ? "Today" : format(date, selected ? "MMM d" : "d")}
                 </span>
-                <span className="flex gap-1">
+                <div className="flex items-center gap-1">
+                  {leadBadges.map((lead) => (
+                    <span
+                      key={`${iso}-lead-${lead.id}`}
+                      className="inline-flex h-4 min-w-[0.75rem] items-center justify-center rounded-full px-1 text-[8px] font-bold uppercase text-white"
+                      style={{ background: stageColors[lead.stage] ?? "var(--color-primary)" }}
+                    />
+                  ))}
                   {Object.entries(dayEvents)
                     .filter(([, count]) => (count ?? 0) > 0)
                     .slice(0, 3)
@@ -93,10 +104,26 @@ export default function MonthGrid({ events = {}, appointmentsByDay = {}, onSelec
                         style={{ background: STATUS_DOTS[status as AppointmentStatus] || "var(--color-primary)" }}
                       />
                     ))}
-                </span>
+                </div>
               </div>
 
               <div className="mt-1 flex-1 space-y-1 overflow-hidden">
+                {dayLeads.length > 0 ? (
+                  <div className="space-y-1">
+                    {dayLeads.slice(0, 2).map((lead) => (
+                      <div
+                        key={`${iso}-preview-${lead.id}`}
+                        className="line-clamp-1 rounded-[--radius-sm] bg-[rgba(18,13,10,0.1)] px-2 py-1 text-[10px] font-medium text-[--color-foreground]"
+                        style={{ borderLeft: `3px solid ${stageColors[lead.stage] ?? "var(--color-primary)"}` }}
+                      >
+                        {lead.label}
+                      </div>
+                    ))}
+                    {dayLeads.length > 2 ? (
+                      <div className="text-[10px] text-[--color-muted-foreground]">+{dayLeads.length - 2} more leads</div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {visibleAppointments.map((appointment) => {
                   const startTime = new Date(appointment.start);
                   const label = Number.isNaN(startTime.getTime()) ? "" : format(startTime, "p");

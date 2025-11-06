@@ -6,7 +6,7 @@ import './globals.css';
 import AppProviders from '@/components/ui/app-providers';
 import AnalyticsEvents from '@/components/ui/analytics-events';
 import Navbar from '@/components/ui/navbar';
-import Footer from '@/components/ui/footer';
+import FooterGate from '@/components/ui/footer-gate';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
 
@@ -264,7 +264,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProviders>
           <Navbar />
           {children}
-          <Footer />
+          <FooterGate />
           <AnalyticsEvents />
         </AppProviders>
         <SpeedInsights />

@@ -67,7 +67,10 @@ export default function StatsCards() {
         const value = values[id];
         const showShimmer = isLoading && !data;
         return (
-          <article key={id} className="glass rounded-[--radius-xl] border border-[--color-border]/60 p-4">
+          <article
+            key={id}
+            className="glass-strong rounded-[calc(var(--radius)+12px)] border border-[--color-border]/50 p-4 shadow-[0_20px_48px_rgba(18,13,10,0.18)]"
+          >
             <div className="text-sm text-[--color-muted-foreground]">{label}</div>
             <div className="mt-2 text-3xl font-semibold text-[--color-foreground]">
               {showShimmer ? <span className={`${shimmerClasses} inline-block h-8 w-16 rounded-md`} /> : value}

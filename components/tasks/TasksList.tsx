@@ -83,7 +83,7 @@ export default function TasksList() {
   const { overdue, today, upcoming } = useMemo(() => categorizeTasks(data ?? []), [data]);
 
   const renderSection = (title: string, tasks: Task[], emptyText: string) => (
-    <section className="glass rounded-[--radius-xl] border border-[--color-border]/60">
+    <section className="glass-strong rounded-[calc(var(--radius)+12px)] border border-[--color-border]/50 shadow-[0_20px_48px_rgba(18,13,10,0.18)]">
       <header className="border-b border-[--color-border]/40 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-[--color-muted-foreground]">
         {title}
       </header>
