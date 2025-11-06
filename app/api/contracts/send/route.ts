@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma-node";
-import { createAndSendFromTemplate } from "@/lib/documenso";
+import { generateDocumentFromTemplate, getTemplate, sendDocument } from "@/lib/documenso";
 import { documentDisplayName, mapLeadToTemplateFields } from "@/lib/contractFieldMap";
 
 export async function POST(req: Request) {
@@ -21,38 +21,68 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Documenso template not configured" }, { status: 500 });
     }
 
-    const name = documentDisplayName(lead);
+    const templateDetails = await getTemplate(template);
+    const recipientsFromTemplate = templateDetails.Recipient ?? [];
+
+    if (!recipientsFromTemplate.length) {
+      return NextResponse.json({ error: "Template has no recipients configured" }, { status: 400 });
+    }
+
+    const primaryRecipientIndex = recipientsFromTemplate.findIndex(
+      (recipient) => (recipient.role ?? "").toUpperCase() === "SIGNER",
+    );
+    const fallbackIndex = primaryRecipientIndex >= 0 ? primaryRecipientIndex : 0;
+
+    const recipients = recipientsFromTemplate.map((recipient, index) => {
+      const isPrimary = index === fallbackIndex;
+      return {
+        id: Number(
+          typeof recipient.id === "number" && Number.isFinite(recipient.id)
+            ? recipient.id
+            : index + 1,
+        ),
+        name: isPrimary ? lead.name ?? recipient.name ?? "Client" : recipient.name ?? `Recipient ${index + 1}`,
+        email: isPrimary ? lead.email : recipient.email ?? `recipient.${index + 1}@documenso.com`,
+        signingOrder: recipient.signingOrder ?? null,
+      };
+    });
+
+    const title = documentDisplayName(lead);
     const redirectUrl = `${process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? ""}/contracts/thanks?lead=${lead.id}`;
 
-    const doc = await createAndSendFromTemplate({
+    const { documentId } = await generateDocumentFromTemplate({
       templateId: template,
-      name,
-      recipients: [
-        {
-          email: lead.email,
-          name: lead.name ?? undefined,
-          role: "signer",
-          send_email: true,
-        },
-      ],
-      fields: mapLeadToTemplateFields(lead),
+      recipients,
+      title,
+      externalId: lead.id,
       redirectUrl,
+      formValues: mapLeadToTemplateFields(lead),
+      metadata: {
+        leadId: lead.id,
+        partySize: (lead as any).partySize ?? null,
+        eventDate: lead.eventDate ? lead.eventDate.toISOString() : null,
+      },
+      subject: templateDetails.templateMeta?.subject ?? undefined,
+      message: templateDetails.templateMeta?.message ?? undefined,
+      timezone: templateDetails.templateMeta?.timezone ?? undefined,
+      dateFormat: templateDetails.templateMeta?.dateFormat ?? undefined,
+      signingOrder: (templateDetails.templateMeta?.signingOrder as "PARALLEL" | "SEQUENTIAL" | null) ?? undefined,
     });
+
+    await sendDocument(documentId);
 
     const contract = await prisma.contract.create({
       data: {
         leadId: lead.id,
-        title: name,
+        title,
         amountCents: lead.budgetCents ?? null,
         status: "SENT",
         sentAt: new Date(),
-        externalRef: doc.id,
+        externalRef: documentId,
       },
     });
 
-    const signingLink = doc.signingLinks?.[0]?.url ?? null;
-
-    return NextResponse.json({ ok: true, contractId: contract.id, signingLink });
+    return NextResponse.json({ ok: true, contractId: contract.id, documentId });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? "Failed to send contract" }, { status: 500 });
   }

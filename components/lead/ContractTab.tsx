@@ -23,6 +23,67 @@ type SendState = {
   error: string | null;
 };
 
+const moneyPattern = /-?\d+(?:\.\d+)?/;
+
+function parseMoneyValue(value: string): number | null {
+  const match = value.replace(/,/g, "").match(moneyPattern);
+  return match ? Number(match[0]) : null;
+}
+
+function normalizePriceText(raw: unknown): string {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return `$${raw.toFixed(2)}`;
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return "$0.00";
+    const suffixMatch = trimmed.match(/(\/.*)$/);
+    const suffix = suffixMatch ? suffixMatch[1] ?? "" : "";
+    const numeric = parseMoneyValue(trimmed);
+    if (numeric !== null) {
+      return `$${numeric.toFixed(2)}${suffix}`;
+    }
+    return trimmed.startsWith("$") ? trimmed : `$${trimmed}`;
+  }
+
+  if (raw && typeof raw === "object") {
+    const candidate =
+      (raw as any).priceText ??
+      (raw as any).price ??
+      (raw as any).amount ??
+      (raw as any).value ??
+      (typeof (raw as any).amountCents === "number"
+        ? (raw as any).amountCents / 100
+        : undefined);
+    return normalizePriceText(candidate);
+  }
+
+  return "$0.00";
+}
+
+function normalizeContractItems(items: any[] | undefined | null) {
+  if (!Array.isArray(items) || !items.length) return undefined;
+  return items
+    .map((item) => {
+      if (!item) return null;
+      const labelSource =
+        item.label ??
+        item.name ??
+        item.title ??
+        (typeof item === "string" ? item : null);
+      const label =
+        typeof labelSource === "string" && labelSource.trim()
+          ? labelSource.trim()
+          : "Service";
+      const priceText = normalizePriceText(
+        item.priceText ?? item.price ?? item.amount ?? item.value,
+      );
+      return { label, priceText };
+    })
+    .filter(Boolean) as Array<{ label: string; priceText: string }>;
+}
+
 export default function ContractTab({ leadId, lead, defaultTemplateId }: Props) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
@@ -61,32 +122,25 @@ export default function ContractTab({ leadId, lead, defaultTemplateId }: Props) 
     [],
   );
 
+  const latestLocalContract = useMemo(() => {
+    const list = Array.isArray(lead.contracts) ? lead.contracts : [];
+    return list.length ? list[0] : null;
+  }, [lead.contracts]);
+
   const previewItems = useMemo(() => {
-    const services = Array.isArray((lead as ContractLead).services) ? (lead as ContractLead).services : null;
+    const itemsFromContract = normalizeContractItems(latestLocalContract?.items);
+    if (itemsFromContract?.length) return itemsFromContract;
+
+    const services = Array.isArray((lead as ContractLead).services)
+      ? (lead as ContractLead).services
+      : null;
     if (!services || !services.length) return undefined;
-    return services
-      .map((service) => {
-        if (!service) return null;
-        const label = typeof service.name === "string" && service.name.trim().length ? service.name.trim() : "Service";
-        const priceValue =
-          typeof service.price === "number"
-            ? service.price
-            : Number.isFinite(Number(service.price))
-              ? Number(service.price)
-              : null;
-        const priceText =
-          typeof service.price === "string" && service.price.trim().length
-            ? service.price
-            : priceValue !== null
-              ? `$${priceValue.toFixed(2)}`
-              : "$0.00";
-        return { label, priceText };
-      })
-      .filter(Boolean) as Array<{ label: string; priceText: string }>;
-  }, [lead]);
+    return normalizeContractItems(services);
+  }, [lead, latestLocalContract]);
 
   const previewDeposit = useMemo(() => {
     const candidateFields = [
+      latestLocalContract?.depositAmount,
       (lead as ContractLead).depositAmount,
       (lead as ContractLead).deposit,
       (lead as ContractLead).contracts?.[0]?.depositAmount,
@@ -99,15 +153,16 @@ export default function ContractTab({ leadId, lead, defaultTemplateId }: Props) 
       return Math.max(100, Math.round(((lead as ContractLead).budgetCents / 100) * 0.25));
     }
     return undefined;
-  }, [lead]);
+  }, [lead, latestLocalContract]);
 
   const contractPreviewHtml = useMemo(
     () =>
       renderHollywoodStyleContract(lead as any, {
         items: previewItems,
         depositAmount: previewDeposit,
+        fillable: latestLocalContract ? latestLocalContract.fillable ?? false : false,
       }),
-    [lead, previewItems, previewDeposit],
+    [lead, latestLocalContract, previewItems, previewDeposit],
   );
 
   const sendContract = useCallback(async () => {
@@ -128,7 +183,7 @@ export default function ContractTab({ leadId, lead, defaultTemplateId }: Props) 
       setSendState({
         loading: false,
         message: "Contract sent to client.",
-        link: data?.signingLink ?? null,
+        link: null,
         error: null,
       });
       void fetchContracts();
@@ -166,6 +221,7 @@ export default function ContractTab({ leadId, lead, defaultTemplateId }: Props) 
             options={{
               depositAmount: previewDeposit,
               items: previewItems,
+              fillable: false,
             }}
           />
         </div>

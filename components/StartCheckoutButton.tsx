@@ -1,13 +1,19 @@
 'use client'
 import { useState } from 'react'
 
+type Props = {
+  amountCents?: number
+  productName?: string
+  email?: string
+  name?: string
+}
+
 export default function StartCheckoutButton({
   amountCents = 2999,
   productName = 'The Makeup Guide',
-}:{
-  amountCents?: number
-  productName?: string
-}){
+  email,
+  name,
+}: Props){
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
 
@@ -17,7 +23,7 @@ export default function StartCheckoutButton({
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountCents, productName })
+        body: JSON.stringify({ amountCents, productName, email, name })
       })
       const data = await res.json()
       if(!res.ok || !data.url) throw new Error(data.error || 'Checkout init failed')
