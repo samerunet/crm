@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { endOfMonth, format, isSameDay, parseISO, startOfMonth } from "date-fns";
+import clsx from "clsx";
+import { ChevronDown } from "lucide-react";
 
 import { CalendarProvider, useCalendarContext } from "@/components/calendar/CalendarContext";
 import MonthWidget from "@/components/calendar/MonthWidget";
@@ -128,6 +130,8 @@ function DashboardShell() {
     date: new Date(),
     leads: [],
   });
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
 
   const filtersKey = filters.slice().sort().join("|");
   const recentCreatedAfter = useMemo(() => {
@@ -340,60 +344,113 @@ function DashboardShell() {
     [daySheetData.date, openDayLeadsSheet, setSelectedDate],
   );
 
+  const workspacePanelId = "workspace-panel";
+  const insightsPanelId = "insights-panel";
+
   return (
-    <div className="grid gap-6 lg:grid-cols-12">
-      <aside className="lg:col-span-3 space-y-4">
-        <PipelineSidebar />
-        <QuickFilters />
-        <UsersPanel />
-      </aside>
+    <>
+      <div className="grid gap-6 lg:grid-cols-12">
+        <main className="order-1 space-y-4 lg:order-2 lg:col-span-6">
+          <DashboardHeader
+            onOpenNewLead={() => {
+              setNewLeadsOpen(true);
+            }}
+            onAddLead={() => {
+              setNewLeadInitialDate(undefined);
+              setNewLeadModalOpen(true);
+            }}
+            onCreateEvent={() => setCreateEventOpen(true)}
+            onSelectLead={handleSelectLeadFromApi}
+            onSelectTask={handleSelectTask}
+            onSelectAppointment={handleSelectAppointment}
+          />
 
-      <main className="lg:col-span-6 space-y-4">
-        <DashboardHeader
-          onOpenNewLead={() => {
-            setNewLeadsOpen(true);
-          }}
-          onAddLead={() => {
-            setNewLeadInitialDate(undefined);
-            setNewLeadModalOpen(true);
-          }}
-          onCreateEvent={() => setCreateEventOpen(true)}
-          onSelectLead={handleSelectLeadFromApi}
-          onSelectTask={handleSelectTask}
-          onSelectAppointment={handleSelectAppointment}
-        />
+          <StatsCards />
 
-        <StatsCards />
+          <CenterTabs
+            tab={tab}
+            onTabChange={setTab}
+            leads={leadsState}
+            isLoadingLeads={isLoadingLeads}
+            onOpenLead={handleOpenLead}
+            appointments={dashboardAppointments.forSelectedDay}
+            calendarDensity={dashboardAppointments.byDate}
+            appointmentsByDay={appointmentsByDay}
+            leadsByDay={leadsByDayForGrid}
+            stageColors={STAGE_BADGE_COLORS}
+            selectedDate={selectedDate}
+            onSelectDate={(date) => {
+              setSelectedDate(date);
+              openDayLeadsSheet(date);
+            }}
+            onScheduleLead={handleQuickScheduleLead}
+            onCreateLeadForDay={() => {
+              setNewLeadInitialDate(selectedDate);
+              setNewLeadModalOpen(true);
+            }}
+          />
+        </main>
 
-        <CenterTabs
-          tab={tab}
-          onTabChange={setTab}
-          leads={leadsState}
-          isLoadingLeads={isLoadingLeads}
-          onOpenLead={handleOpenLead}
-          appointments={dashboardAppointments.forSelectedDay}
-          calendarDensity={dashboardAppointments.byDate}
-          appointmentsByDay={appointmentsByDay}
-          leadsByDay={leadsByDayForGrid}
-          stageColors={STAGE_BADGE_COLORS}
-          selectedDate={selectedDate}
-          onSelectDate={(date) => {
-            setSelectedDate(date);
-            openDayLeadsSheet(date);
-          }}
-          onScheduleLead={handleQuickScheduleLead}
-          onCreateLeadForDay={() => {
-            setNewLeadInitialDate(selectedDate);
-            setNewLeadModalOpen(true);
-          }}
-        />
-      </main>
+        <aside className="order-2 space-y-3 lg:order-1 lg:col-span-3">
+          <button
+            type="button"
+            className="lg:hidden glass rounded-[--radius-xl] px-4 py-3 text-sm font-semibold tracking-wide flex items-center justify-between"
+            onClick={() => setWorkspaceOpen((open) => !open)}
+            aria-expanded={workspaceOpen}
+            aria-controls={workspacePanelId}
+          >
+            <span>Pipeline &amp; filters</span>
+            <ChevronDown
+              className={clsx(
+                "size-4 transition-transform duration-200",
+                workspaceOpen ? "rotate-180" : "rotate-0",
+              )}
+            />
+          </button>
+          <div
+            id={workspacePanelId}
+            className={clsx(
+              "space-y-4",
+              workspaceOpen ? "block" : "hidden",
+              "lg:block lg:space-y-4",
+            )}
+          >
+            <PipelineSidebar />
+            <QuickFilters />
+            <UsersPanel />
+          </div>
+        </aside>
 
-      <aside className="lg:col-span-3 space-y-4">
-        <RevenueSummary />
-        <Kpis />
-        <TodayPanel appointments={dashboardAppointments.forSelectedDay} onCreate={() => setCreateEventOpen(true)} />
-      </aside>
+        <aside className="order-3 space-y-3 lg:order-3 lg:col-span-3">
+          <button
+            type="button"
+            className="lg:hidden glass rounded-[--radius-xl] px-4 py-3 text-sm font-semibold tracking-wide flex items-center justify-between"
+            onClick={() => setInsightsOpen((open) => !open)}
+            aria-expanded={insightsOpen}
+            aria-controls={insightsPanelId}
+          >
+            <span>Insights &amp; schedule</span>
+            <ChevronDown
+              className={clsx(
+                "size-4 transition-transform duration-200",
+                insightsOpen ? "rotate-180" : "rotate-0",
+              )}
+            />
+          </button>
+          <div
+            id={insightsPanelId}
+            className={clsx(
+              "space-y-4",
+              insightsOpen ? "block" : "hidden",
+              "lg:block lg:space-y-4",
+            )}
+          >
+            <RevenueSummary />
+            <Kpis />
+            <TodayPanel appointments={dashboardAppointments.forSelectedDay} onCreate={() => setCreateEventOpen(true)} />
+          </div>
+        </aside>
+      </div>
 
       <NewLeadModal
         open={newLeadModalOpen}
@@ -457,7 +514,7 @@ function DashboardShell() {
         stageColors={STAGE_BADGE_COLORS}
         onNavigate={navigateDay}
       />
-    </div>
+    </>
   );
 }
 
