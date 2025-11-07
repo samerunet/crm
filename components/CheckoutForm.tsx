@@ -4,31 +4,69 @@ import { useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import GuidePaymentForm from "@/components/GuidePaymentForm";
 
-const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-
 export default function CheckoutForm() {
-  const stripePromise = useMemo(() => (publishableKey ? loadStripe(publishableKey) : null), []);
+  const [publishableKey, setPublishableKey] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  const stripePromise = useMemo(() => {
+    if (!publishableKey) return null;
+    return loadStripe(publishableKey);
+  }, [publishableKey]);
 
   useEffect(() => {
-    fetch("/api/payments/intent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product: "makeup-guide" }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok || !data?.clientSecret) {
-          throw new Error(data?.error || "Unable to create payment intent");
+    let active = true;
+
+    async function bootstrap() {
+      try {
+        const [configRes, intentRes] = await Promise.all([
+          fetch("/api/payments/config", { cache: "no-store" }),
+          fetch("/api/payments/intent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ product: "makeup-guide" }),
+          }),
+        ]);
+
+        const config = await configRes.json();
+        if (!configRes.ok || !config?.publishableKey) {
+          throw new Error(config?.error || "Stripe configuration missing");
         }
-        setClientSecret(data.clientSecret);
-      })
-      .catch((err) => {
+
+        const intent = await intentRes.json();
+        if (!intentRes.ok || !intent?.clientSecret) {
+          throw new Error(intent?.error || "Unable to create payment intent");
+        }
+
+        if (!active) return;
+        setPublishableKey(config.publishableKey);
+        setClientSecret(intent.clientSecret);
+      } catch (err: any) {
         console.error(err);
-        setError(err.message || "Unable to load checkout");
-      });
+        if (!active) return;
+        if (err?.message?.toLowerCase().includes("stripe")) {
+          setConfigError(err.message);
+        } else {
+          setError(err?.message || "Unable to load checkout");
+        }
+      }
+    }
+
+    bootstrap();
+    return () => {
+      active = false;
+    };
   }, []);
+
+  if (configError) {
+    return (
+      <div className="liquid-card space-y-3 p-5 text-sm opacity-85">
+        <p className="text-base font-semibold text-[--color-foreground]">Stripe not configured</p>
+        <p>{configError}</p>
+      </div>
+    );
+  }
 
   if (!publishableKey || !stripePromise) {
     return (
@@ -60,7 +98,7 @@ export default function CheckoutForm() {
           Card details are encrypted and processed by Stripe. Apple Pay / Google Pay appear automatically when available.
         </p>
       </div>
-      <GuidePaymentForm clientSecret={clientSecret} />
+      <GuidePaymentForm clientSecret={clientSecret} publishableKey={publishableKey} />
     </div>
   );
 }
