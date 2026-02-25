@@ -17,6 +17,7 @@ export default function BookingModal({
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const [name, setName] = useState('');
+  const [occasion, setOccasion] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
@@ -72,12 +73,20 @@ export default function BookingModal({
   }
 
   function minValid() {
-    return !!(name.trim() && hasContact() && servicesCountNum >= 1 && location.trim() && date);
+    return !!(
+      name.trim() &&
+      hasContact() &&
+      occasion.trim() &&
+      servicesCountNum >= 1 &&
+      location.trim() &&
+      date
+    );
   }
 
   function nextMissingFieldId(): string | null {
     if (!name.trim()) return 'field-name';
     if (!hasContact()) return 'field-phone';
+    if (!occasion.trim()) return 'field-occasion';
     if (!(servicesCountNum >= 1)) return 'field-services-count';
     if (!location.trim()) return 'field-location';
     if (!date) return 'field-date';
@@ -88,6 +97,7 @@ export default function BookingModal({
     const lines = [
       'Booking Inquiry',
       name ? `Name: ${name}` : '',
+      occasion ? `Occasion: ${occasion}` : '',
       phone ? `Phone: ${phone}` : '',
       email ? `Email: ${email}` : '',
       servicesCountNum ? `# Services: ${servicesCountNum}` : '',
@@ -98,7 +108,18 @@ export default function BookingModal({
       notes ? `Notes: ${notes}` : '',
     ].filter(Boolean);
     return encodeURIComponent(lines.join('\n'));
-  }, [name, phone, email, servicesCountNum, serviceHint, date, eventTime, location, notes]);
+  }, [
+    name,
+    occasion,
+    phone,
+    email,
+    servicesCountNum,
+    serviceHint,
+    date,
+    eventTime,
+    location,
+    notes,
+  ]);
 
   async function submit() {
     if (!minValid()) {
@@ -112,6 +133,7 @@ export default function BookingModal({
 
     const fallbackMessage = [
       `Booking inquiry`,
+      occasion.trim() ? `Occasion: ${occasion.trim()}` : '',
       `${servicesCountNum} service(s)`,
       serviceHint ? `Requested: ${serviceHint}` : '',
       date ? `Event date: ${date}` : '',
@@ -127,6 +149,7 @@ export default function BookingModal({
         name: name.trim(),
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
+        occasion: occasion.trim() || undefined,
         servicesCount: servicesCountNum,
         service: serviceHint || undefined,
         eventDate: date,
@@ -232,6 +255,18 @@ export default function BookingModal({
               />
 
               <FloatingInput
+                id="field-occasion"
+                label="Occasion *"
+                value={occasion}
+                onChange={setOccasion}
+                name="occasion"
+                autoComplete="on"
+                inputMode="text"
+                enterKeyHint="next"
+                required
+              />
+
+              <FloatingInput
                 id="field-phone"
                 label="Phone *"
                 value={phone}
@@ -255,16 +290,15 @@ export default function BookingModal({
                 enterKeyHint="next"
               />
 
-              <FloatingSelect
+              <FloatingInput
                 id="field-services-count"
                 label="Number of services *"
                 value={servicesCount}
                 onChange={setServicesCount}
-                options={
-                  Array.from({ length: 15 }, (_, i) =>
-                    String(i + 1),
-                  ) as unknown as readonly string[]
-                }
+                name="services-count"
+                autoComplete="off"
+                inputMode="numeric"
+                enterKeyHint="next"
                 required
               />
 
