@@ -5,25 +5,6 @@ import clsx from 'clsx';
 
 export type Service = { id: string; title: string } | undefined;
 
-const SERVICE_OPTIONS = [
-  'Bridal Makeup',
-  'Bridal Party Makeup',
-  'Special Occasion Makeup',
-  'Editorial & Brand Work',
-  'Studio Appointments',
-  'Destination Weddings',
-  'Other',
-] as const;
-
-type ServiceOption = (typeof SERVICE_OPTIONS)[number];
-
-const LOCATION_OPTIONS = [
-  'Studio Appointment', // default
-  'On-site / Mobile',
-  'Venue / Hotel',
-  'Other (enter address)',
-] as const;
-
 export default function BookingModal({
   open,
   onClose,
@@ -35,31 +16,21 @@ export default function BookingModal({
 }) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  // ---------- form state ----------
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
-  const [serviceSelect, setServiceSelect] = useState<ServiceOption | ''>('');
-  const [otherService, setOtherService] = useState('');
+  const [servicesCount, setServicesCount] = useState('1');
 
-  const [date, setDate] = useState(''); // YYYY-MM-DD
-  const [eventTime, setEventTime] = useState(''); // e.g., "6:00 AM"
+  const [date, setDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
 
-  const [partySize, setPartySize] = useState<number>(1);
-
-  // Location as dropdown (default: Studio Appointment)
-  const [locationChoice, setLocationChoice] =
-    useState<(typeof LOCATION_OPTIONS)[number]>('Studio Appointment');
-  const [locationCustom, setLocationCustom] = useState('');
-
+  const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
 
-  // UX
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<null | { ok: boolean; message: string }>(null);
 
-  // ---------- lifecycles ----------
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -71,23 +42,6 @@ export default function BookingModal({
     if (open) setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open]);
 
-  // prefill from opener (if “Book” clicked on a service)
-  useEffect(() => {
-    if (!open || !service?.title) return;
-    const title = service.title.trim();
-    const hit = SERVICE_OPTIONS.find(
-      (s) => s !== 'Other' && s.toLowerCase() === title.toLowerCase(),
-    );
-    if (hit) {
-      setServiceSelect(hit);
-      setOtherService('');
-    } else {
-      setServiceSelect('Other');
-      setOtherService(title);
-    }
-  }, [open, service?.title]);
-
-  // ---------- bounds ----------
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const maxDateISO = useMemo(() => {
     const d = new Date();
@@ -95,7 +49,6 @@ export default function BookingModal({
     return d.toISOString().slice(0, 10);
   }, []);
 
-  // hour-only dropdown (5 AM – 7 PM)
   const TIME_LABELS = useMemo(() => {
     const labels: string[] = [];
     for (let h = 5; h <= 19; h++) {
@@ -106,23 +59,28 @@ export default function BookingModal({
     return labels;
   }, []);
 
-  // ---------- helpers ----------
-  const chosenServiceTitle =
-    (serviceSelect === 'Other' ? otherService.trim() : serviceSelect) || '';
+  const serviceHint = (service?.title || '').trim();
 
-  const locationString =
-    locationChoice === 'Other (enter address)' ? locationCustom.trim() || 'Other' : locationChoice;
+  const servicesCountNum = useMemo(() => {
+    const n = parseInt(String(servicesCount).replace(/[^\d]/g, ''), 10);
+    if (!Number.isFinite(n) || n < 1) return 0;
+    return Math.min(n, 15);
+  }, [servicesCount]);
 
   function hasContact() {
     return !!(phone.trim() || email.trim());
   }
+
   function minValid() {
-    return !!(name.trim() && chosenServiceTitle && hasContact());
+    return !!(name.trim() && hasContact() && servicesCountNum >= 1 && location.trim() && date);
   }
+
   function nextMissingFieldId(): string | null {
     if (!name.trim()) return 'field-name';
-    if (!hasContact()) return phone.trim() ? 'field-email' : 'field-phone';
-    if (!chosenServiceTitle) return 'field-service';
+    if (!hasContact()) return 'field-phone';
+    if (!(servicesCountNum >= 1)) return 'field-services-count';
+    if (!location.trim()) return 'field-location';
+    if (!date) return 'field-date';
     return null;
   }
 
@@ -130,32 +88,19 @@ export default function BookingModal({
     const lines = [
       'Booking Inquiry',
       name ? `Name: ${name}` : '',
-      email ? `Email: ${email}` : '',
       phone ? `Phone: ${phone}` : '',
-      chosenServiceTitle ? `Service: ${chosenServiceTitle}` : '',
-      date ? `Date: ${date}` : '',
-      eventTime ? `Time: ${eventTime}` : '',
-      locationString ? `Location: ${locationString}` : '',
-      partySize ? `Party Size: ${partySize}` : '',
+      email ? `Email: ${email}` : '',
+      servicesCountNum ? `# Services: ${servicesCountNum}` : '',
+      serviceHint ? `Requested: ${serviceHint}` : '',
+      date ? `Event date: ${date}` : '',
+      eventTime ? `Event time: ${eventTime}` : '',
+      location ? `Location: ${location}` : '',
       notes ? `Notes: ${notes}` : '',
     ].filter(Boolean);
     return encodeURIComponent(lines.join('\n'));
-  }, [name, email, phone, chosenServiceTitle, date, eventTime, locationString, partySize, notes]);
+  }, [name, phone, email, servicesCountNum, serviceHint, date, eventTime, location, notes]);
 
   async function submit() {
-    // Fallback message for CRMs that expect a message body
-    const fallbackMessage =
-      notes.trim() ||
-      [
-        `Quick booking for ${chosenServiceTitle || 'Service'}`,
-        date && `on ${date}`,
-        eventTime && `at ${eventTime}`,
-        locationString && `in ${locationString}`,
-        `party ${partySize}`,
-      ]
-        .filter(Boolean)
-        .join(' • ');
-
     if (!minValid()) {
       const id = nextMissingFieldId();
       if (id) document.getElementById(id)?.focus();
@@ -165,23 +110,33 @@ export default function BookingModal({
     setSubmitting(true);
     setResult(null);
 
+    const fallbackMessage = [
+      `Booking inquiry`,
+      `${servicesCountNum} service(s)`,
+      serviceHint ? `Requested: ${serviceHint}` : '',
+      date ? `Event date: ${date}` : '',
+      eventTime ? `Event time: ${eventTime}` : '',
+      location ? `Location: ${location}` : '',
+      notes.trim() ? `Notes: ${notes.trim()}` : '',
+    ]
+      .filter(Boolean)
+      .join(' • ');
+
     try {
-      // Build payload to align with your Lead schema
-      // NOTE: We send *both* `eventDate` and `date` for compatibility.
       const payload = {
-        name: name.trim(), // Lead.name (String?) — we send it
-        email: email.trim() || undefined, // Lead.email (String? in updated schema)
-        phone: phone.trim() || undefined, // Lead.phone (String?)
-        service: chosenServiceTitle || undefined, // Lead.service (String?)
-        eventDate: date || undefined, // Lead.eventDate (DateTime?) — server can parse
-        date: date || undefined, // compat if your handler still maps `date` -> eventDate
-        time: eventTime.trim() || undefined, // Lead.time (String?)
-        partySize: Number.isFinite(partySize) ? partySize : 1, // Lead.partySize (Int?)
-        location: locationString || undefined, // Lead.location (String?)
-        addOns: [], // Lead.addOns (Json?) — keep array for older handlers
-        notes: notes.trim() || undefined, // Lead.notes (String?)
-        message: fallbackMessage, // Lead.message (String?)
-        source: 'website', // Lead.source (String?)
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        servicesCount: servicesCountNum,
+        service: serviceHint || undefined,
+        eventDate: date,
+        date: date,
+        time: eventTime.trim() || undefined,
+        location: location.trim(),
+        notes: notes.trim() || undefined,
+        message: fallbackMessage,
+        source: 'website',
+        partySize: servicesCountNum,
       };
 
       const res = await fetch('/api/contact', {
@@ -194,7 +149,6 @@ export default function BookingModal({
         body: JSON.stringify(payload),
       });
 
-      // Show real backend error text if not JSON
       const text = await res.text();
       let data: any = {};
       try {
@@ -221,7 +175,6 @@ export default function BookingModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      {/* Backdrop */}
       <button
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         aria-label="Close"
@@ -240,7 +193,6 @@ export default function BookingModal({
         )}
         style={{ maxHeight: 'min(92vh, 760px)' }}
       >
-        {/* subtle glow */}
         <div
           aria-hidden
           className="pointer-events-none absolute -inset-1 opacity-70"
@@ -250,7 +202,6 @@ export default function BookingModal({
           }}
         />
 
-        {/* Header */}
         <div className="relative z-10 flex items-center justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
           <h2 className="text-lg leading-tight font-semibold text-white">Booking Request</h2>
           <button
@@ -263,10 +214,9 @@ export default function BookingModal({
           </button>
         </div>
 
-        {/* Form (boxes are ~5 shades lighter now) */}
         <div className="relative z-10 mt-3 max-h-[62vh] overflow-y-auto px-4 pb-28 sm:px-6 sm:pb-24">
-          {/* REQUIRED */}
           <div className="mb-2 text-[11px] tracking-wide text-white/60 uppercase">Required</div>
+
           <section className="rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FloatingInput
@@ -280,9 +230,10 @@ export default function BookingModal({
                 enterKeyHint="next"
                 required
               />
+
               <FloatingInput
                 id="field-phone"
-                label="Phone"
+                label="Phone *"
                 value={phone}
                 onChange={setPhone}
                 type="tel"
@@ -291,9 +242,10 @@ export default function BookingModal({
                 inputMode="tel"
                 enterKeyHint="next"
               />
+
               <FloatingInput
                 id="field-email"
-                label="Email"
+                label="Email *"
                 value={email}
                 onChange={setEmail}
                 type="email"
@@ -303,55 +255,48 @@ export default function BookingModal({
                 enterKeyHint="next"
               />
 
+              <FloatingSelect
+                id="field-services-count"
+                label="Number of services *"
+                value={servicesCount}
+                onChange={setServicesCount}
+                options={
+                  Array.from({ length: 15 }, (_, i) =>
+                    String(i + 1),
+                  ) as unknown as readonly string[]
+                }
+                required
+              />
+
               <div className="sm:col-span-2">
-                <FloatingSelect
-                  id="field-service"
-                  label="Service *"
-                  value={serviceSelect}
-                  onChange={(v) => {
-                    setServiceSelect(v as ServiceOption);
-                    if (v !== 'Other') setOtherService('');
-                  }}
-                  options={SERVICE_OPTIONS}
+                <FloatingInput
+                  id="field-location"
+                  label="Location / Address *"
+                  value={location}
+                  onChange={setLocation}
+                  name="street-address"
+                  autoComplete="street-address"
+                  inputMode="text"
+                  enterKeyHint="next"
                   required
                 />
-                {serviceSelect === 'Other' && (
-                  <div className="mt-3">
-                    <FloatingInput
-                      id="field-otherService"
-                      label="Describe the service *"
-                      value={otherService}
-                      onChange={setOtherService}
-                      name="service-other"
-                      autoComplete="on"
-                      enterKeyHint="next"
-                      required
-                    />
-                  </div>
-                )}
               </div>
-            </div>
-          </section>
 
-          {/* RECOMMENDED 1: Date & Time */}
-          <div className="mt-6 mb-2 text-[11px] tracking-wide text-white/60 uppercase">
-            Recommended
-          </div>
-          <section className="rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
-            <div className="grid gap-4 sm:grid-cols-2">
               <FloatingInput
                 id="field-date"
-                label="Preferred date"
+                label="Event date *"
                 value={date}
                 onChange={setDate}
                 type="date"
                 name="event-date"
                 min={todayISO}
                 max={maxDateISO}
+                required
               />
+
               <FloatingSelect
                 id="field-time"
-                label="Time of the event"
+                label="Time (optional)"
                 value={eventTime}
                 onChange={setEventTime}
                 options={['', ...TIME_LABELS] as unknown as readonly string[]}
@@ -359,49 +304,11 @@ export default function BookingModal({
             </div>
           </section>
 
-          {/* RECOMMENDED 2: Party size & Location */}
-          <section className="mt-4 rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FloatingSelect
-                id="field-party"
-                label="Party size (1–15)"
-                value={String(partySize)}
-                onChange={(v) =>
-                  setPartySize(Math.max(1, Math.min(15, parseInt(String(v || '1'), 10) || 1)))
-                }
-                options={
-                  Array.from({ length: 15 }, (_, i) =>
-                    String(i + 1),
-                  ) as unknown as readonly string[]
-                }
-              />
-              <div>
-                <FloatingSelect
-                  id="field-location"
-                  label="Location"
-                  value={locationChoice}
-                  onChange={(v) => setLocationChoice(v as (typeof LOCATION_OPTIONS)[number])}
-                  options={LOCATION_OPTIONS}
-                />
-                {locationChoice === 'Other (enter address)' && (
-                  <div className="mt-3">
-                    <FloatingInput
-                      id="field-location-custom"
-                      label="Enter address"
-                      value={locationCustom}
-                      onChange={setLocationCustom}
-                      name="street-address"
-                      autoComplete="street-address"
-                      inputMode="text"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
+          <div className="mt-6 mb-2 text-[11px] tracking-wide text-white/60 uppercase">
+            Optional
+          </div>
 
-          {/* RECOMMENDED 3: Notes */}
-          <section className="mt-4 rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
+          <section className="rounded-2xl border border-white/25 bg-white/[0.12] p-3 sm:p-4">
             <FloatingTextArea
               id="field-notes"
               label="Notes"
@@ -414,7 +321,6 @@ export default function BookingModal({
           </section>
         </div>
 
-        {/* Sticky footer */}
         <div className="pointer-events-auto relative z-10 border-t border-white/12 bg-[rgb(18,13,10)]/94 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <a
@@ -450,7 +356,6 @@ export default function BookingModal({
         </div>
       </div>
 
-      {/* micro-animations + autofill fixes */}
       <style jsx global>{`
         @keyframes slideUp {
           from {
@@ -483,8 +388,6 @@ export default function BookingModal({
     </div>
   );
 }
-
-/* ---------- inputs ---------- */
 
 function FloatingInput({
   id,
@@ -570,7 +473,6 @@ function FloatingTextArea({
   rows = 4,
   autoComplete,
   enterKeyHint,
-  required,
   error,
 }: {
   id?: string;
@@ -581,7 +483,6 @@ function FloatingTextArea({
   rows?: number;
   autoComplete?: string;
   enterKeyHint?: 'next' | 'done';
-  required?: boolean;
   error?: string;
 }) {
   const describedBy = error ? `${id}-error` : undefined;
@@ -633,7 +534,7 @@ function FloatingSelect({
 }: {
   id?: string;
   label: string;
-  value: any; // allow number|string safely
+  value: any;
   onChange: (v: any) => void;
   options: readonly string[];
   required?: boolean;
@@ -654,9 +555,8 @@ function FloatingSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        {/* Allow empty for optional selects (e.g., time) */}
         <option value="" hidden={required}>
-          {id === 'field-service' ? 'Select a service' : ''}
+          {''}
         </option>
         {options.map((opt) => (
           <option key={opt} value={opt}>

@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import GuidePaymentForm from "@/components/GuidePaymentForm";
 
+const buildTimePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
+
 export default function CheckoutForm() {
-  const [publishableKey, setPublishableKey] = useState<string | null>(null);
+  const [publishableKey, setPublishableKey] = useState<string | null>(buildTimePublishableKey);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
@@ -20,33 +22,47 @@ export default function CheckoutForm() {
 
     async function bootstrap() {
       try {
-        const [configRes, intentRes] = await Promise.all([
-          fetch("/api/payments/config", { cache: "no-store" }),
-          fetch("/api/payments/intent", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ product: "makeup-guide" }),
-          }),
-        ]);
-
-        const config = await configRes.json();
-        if (!configRes.ok || !config?.publishableKey) {
-          throw new Error(config?.error || "Stripe configuration missing");
+        let resolvedKey = buildTimePublishableKey;
+        try {
+          const configRes = await fetch("/api/payments/config", { cache: "no-store" });
+          const config = await configRes.json();
+          if (configRes.ok && config?.publishableKey) {
+            resolvedKey = config.publishableKey;
+          } else if (!buildTimePublishableKey) {
+            throw new Error(config?.error || "Stripe publishable key missing");
+          }
+        } catch (configErr) {
+          console.error(configErr);
+          if (!buildTimePublishableKey) {
+            throw configErr instanceof Error ? configErr : new Error("Stripe publishable key missing");
+          }
         }
 
+        if (!resolvedKey) {
+          throw new Error("Stripe publishable key missing");
+        }
+
+        if (active) {
+          setPublishableKey(resolvedKey);
+        }
+
+        const intentRes = await fetch("/api/payments/intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ product: "makeup-guide" }),
+        });
         const intent = await intentRes.json();
         if (!intentRes.ok || !intent?.clientSecret) {
           throw new Error(intent?.error || "Unable to create payment intent");
         }
 
         if (!active) return;
-        setPublishableKey(config.publishableKey);
         setClientSecret(intent.clientSecret);
       } catch (err: any) {
         console.error(err);
         if (!active) return;
-        if (err?.message?.toLowerCase().includes("stripe")) {
-          setConfigError(err.message);
+        if (!buildTimePublishableKey || err?.message?.toLowerCase().includes("publishable")) {
+          setConfigError(err?.message || "Stripe configuration missing");
         } else {
           setError(err?.message || "Unable to load checkout");
         }

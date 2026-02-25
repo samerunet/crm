@@ -2,11 +2,23 @@
 'use client';
 import React from 'react';
 import type { Appointment } from "@/components/admin/types";
+import { useBooking } from '@/components/ui/booking-provider';
 
 export default function ClientSchedule({ events }: { events: Appointment[] }) {
+  const booking = useBooking();
+
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="text-sm font-semibold mb-2">Upcoming Appointments</div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm font-semibold">Upcoming Appointments</div>
+        <button
+          type="button"
+          onClick={() => booking.open()}
+          className="h-9 rounded-lg bg-primary px-3 text-sm text-primary-foreground"
+        >
+          Book appointment
+        </button>
+      </div>
       <div className="divide-y divide-border/60">
         {(events||[]).length ? (events||[]).map(e => {
           const location =
