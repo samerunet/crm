@@ -21,7 +21,7 @@ export default function BookingModal({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
-  const [servicesCount, setServicesCount] = useState('1');
+  const [servicesCount, setServicesCount] = useState('');
 
   const [date, setDate] = useState('');
   const [eventTime, setEventTime] = useState('');
@@ -255,18 +255,6 @@ export default function BookingModal({
               />
 
               <FloatingInput
-                id="field-occasion"
-                label="Occasion *"
-                value={occasion}
-                onChange={setOccasion}
-                name="occasion"
-                autoComplete="on"
-                inputMode="text"
-                enterKeyHint="next"
-                required
-              />
-
-              <FloatingInput
                 id="field-phone"
                 label="Phone *"
                 value={phone}
@@ -291,13 +279,24 @@ export default function BookingModal({
               />
 
               <FloatingInput
+                id="field-occasion"
+                label="Occasion *"
+                value={occasion}
+                onChange={setOccasion}
+                name="occasion"
+                autoComplete="on"
+                inputMode="text"
+                enterKeyHint="next"
+                required
+              />
+              <FloatingInput
                 id="field-services-count"
                 label="Number of services *"
                 value={servicesCount}
                 onChange={setServicesCount}
                 name="services-count"
                 autoComplete="off"
-                inputMode="numeric"
+                inputMode="text"
                 enterKeyHint="next"
                 required
               />
