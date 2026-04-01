@@ -11,7 +11,7 @@ export default async function Page({ searchParams }:{
     <div className="f-container section-y">
       <div className="glass rounded-[var(--radius-xl)] p-10 md:p-14">
         <h1 className="text-3xl font-semibold mb-4">Thank you!</h1>
-        <p className="opacity-90 mb-4">Your payment {status === 'succeeded' ? 'was successful' : `status: ${status}`}. We&apos;re starting your download now and will also email a 24-hour backup link to the address used at checkout. Save the PDF as soon as it opens.</p>
+        <p className="opacity-90 mb-4">Your payment {status === 'succeeded' ? 'was successful' : `status: ${status}`}. We&apos;re starting your download now and will also email the guide link to the address used at checkout. Save the PDF as soon as it opens.</p>
         <div className="mb-4">
           <GuidePurchaseFinalizer sessionId={p.session_id} />
         </div>

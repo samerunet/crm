@@ -115,7 +115,7 @@ export async function sendGuideDeliveryEmail(args: {
           Download your guide
         </a>
       </p>
-      <p><strong>Important:</strong> this email download link stays active for 24 hours. Open it on the device where you want to keep the file and save the PDF immediately.</p>
+      <p><strong>Important:</strong> open the guide on the device where you want to keep it and save the PDF immediately.</p>
       <p>Recommended steps:</p>
       <ol style="padding-left:18px">
         <li>Tap <strong>Download your guide</strong>.</li>
@@ -125,8 +125,7 @@ export async function sendGuideDeliveryEmail(args: {
       </ol>
       <p>If the button does not open, copy and paste this link into your browser:</p>
       <p><a href="${downloadUrl}">${downloadUrl}</a></p>
-      <p>If the link expires before you save the file, reply to this email and we can resend it.</p>
-      <p>Please do not forward this email if you want to keep the download private.</p>
+      <p>If you have trouble downloading the file, reply to this email and we can resend the guide.</p>
       <p>Thank you,<br />Fari Makeup</p>
     </div>
   `;

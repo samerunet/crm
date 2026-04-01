@@ -70,9 +70,8 @@ export function verifyGuideDownloadToken(token: string) {
   }
 }
 
-export function buildGuideDownloadUrl(args: { orderId: string; slug?: string }) {
-  const token = createGuideDownloadToken(args);
-  return `${APP_URL}/api/guides/download?token=${encodeURIComponent(token)}`;
+export function buildGuideDownloadUrl(_args?: { orderId?: string; slug?: string }) {
+  return `${APP_URL}/api/guides/download`;
 }
 
 export function getGuidePdfAbsolutePath() {
