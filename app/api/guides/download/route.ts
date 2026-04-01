@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 
 import {
   getGuidePdfAbsolutePath,
+  hashLegacyGuideDownloadToken,
+  isLegacyGuideDownloadToken,
   verifyGuideDownloadToken,
 } from "@/lib/guide-delivery";
 import { GUIDE_PRODUCT } from "@/lib/guide-product";
@@ -17,16 +19,24 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token") || "";
     const payload = verifyGuideDownloadToken(token);
+    const legacyTokenHash = !payload && isLegacyGuideDownloadToken(token)
+      ? hashLegacyGuideDownloadToken(token)
+      : null;
 
-    if (!payload || payload.slug !== GUIDE_PRODUCT.slug) {
+    if ((!payload || payload.slug !== GUIDE_PRODUCT.slug) && !legacyTokenHash) {
       return new NextResponse("This download link is invalid or expired.", { status: 403 });
     }
 
     const order = await prisma.order.findFirst({
       where: {
-        id: payload.orderId,
         status: "COMPLETED",
         guide: { slug: GUIDE_PRODUCT.slug },
+        ...(payload
+          ? { id: payload.orderId }
+          : {
+              guideDownloadExpiresAt: { gt: new Date() },
+              guideDownloadTokenHash: legacyTokenHash!,
+            }),
       },
     });
 

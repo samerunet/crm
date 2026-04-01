@@ -32,6 +32,14 @@ function signPayload(encodedPayload: string) {
   return crypto.createHmac("sha256", DOWNLOAD_SECRET).update(encodedPayload).digest("base64url");
 }
 
+export function hashLegacyGuideDownloadToken(rawToken: string) {
+  return crypto.createHmac("sha256", DOWNLOAD_SECRET).update(rawToken).digest("hex");
+}
+
+export function isLegacyGuideDownloadToken(token: string) {
+  return /^[a-f0-9]{64}$/i.test(token);
+}
+
 export function createGuideDownloadToken(args: { orderId: string; slug?: string }) {
   const payload: GuideDownloadTokenPayload = {
     exp: Date.now() + EMAIL_DOWNLOAD_LIFETIME_MS,
