@@ -13,9 +13,7 @@ const APP_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (IS_PROD ? "https://farimakeup.com" : "http://localhost:3000");
 const DOWNLOAD_SECRET = process.env.STRIPE_SECRET_KEY || "dev-guide-download-secret";
-const EMAIL_DOWNLOAD_LIFETIME_MS = 1000 * 60 * 60 * 24;
 type GuideDownloadTokenPayload = {
-  exp: number;
   orderId: string;
   slug: string;
 };
@@ -42,7 +40,6 @@ export function isLegacyGuideDownloadToken(token: string) {
 
 export function createGuideDownloadToken(args: { orderId: string; slug?: string }) {
   const payload: GuideDownloadTokenPayload = {
-    exp: Date.now() + EMAIL_DOWNLOAD_LIFETIME_MS,
     orderId: args.orderId,
     slug: args.slug ?? GUIDE_PRODUCT.slug,
   };
@@ -62,16 +59,16 @@ export function verifyGuideDownloadToken(token: string) {
 
   try {
     const payload = JSON.parse(fromBase64Url(encodedPayload)) as GuideDownloadTokenPayload;
-    if (!payload?.orderId || !payload?.slug || !payload?.exp) return null;
-    if (payload.exp < Date.now()) return null;
+    if (!payload?.orderId || !payload?.slug) return null;
     return payload;
   } catch {
     return null;
   }
 }
 
-export function buildGuideDownloadUrl(_args?: { orderId?: string; slug?: string }) {
-  return `${APP_URL}/api/guides/download`;
+export function buildGuideDownloadUrl(args: { orderId: string; slug?: string }) {
+  const token = createGuideDownloadToken(args);
+  return `${APP_URL}/api/guides/download?token=${encodeURIComponent(token)}`;
 }
 
 export function getGuidePdfAbsolutePath() {
