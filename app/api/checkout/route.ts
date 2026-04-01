@@ -60,10 +60,11 @@ export async function POST(req: Request) {
       mode: "payment",
       line_items,
       success_url: `${origin}/guide/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/banner/guide`,
+      cancel_url: `${origin}/pay/guide?canceled=1`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
         ...(name ? { customer_name: name } : {}),
+        slug: "makeup-guide",
         productName: productOverride || "Makeup Guide",
       },
     } as const;
