@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { GUIDE_PRODUCT } from "@/lib/guide-product";
 
 function Form() {
   const stripe = useStripe();
@@ -36,7 +37,7 @@ function Form() {
         disabled={!stripe || loading}
         className="gbtn w-full h-12 rounded-[var(--radius-xl)] grid place-items-center font-medium"
       >
-        {loading ? "Processing…" : "Pay $29.99"}
+        {loading ? "Processing…" : `Pay ${GUIDE_PRODUCT.priceLabel}`}
       </button>
     </form>
   );

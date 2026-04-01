@@ -172,9 +172,9 @@ export async function POST(req: Request) {
       const rawAmount =
         typeof (body as any)?.amountCents === 'number'
           ? (body as any).amountCents
-          : Number((body as any)?.amountCents ?? 2999);
+          : Number((body as any)?.amountCents ?? 2499);
       const amountCents =
-        Number.isFinite(rawAmount) && rawAmount > 0 ? Math.round(rawAmount) : 2999;
+        Number.isFinite(rawAmount) && rawAmount > 0 ? Math.round(rawAmount) : 2499;
       const currency = (sanitize((body as any)?.currency) ?? 'usd').toLowerCase();
       const sessionId =
         sanitize((body as any)?.sessionId) ?? `test_session_${Date.now()}`;

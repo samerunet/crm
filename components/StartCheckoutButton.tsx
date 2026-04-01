@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { GUIDE_PRODUCT, formatGuidePrice } from '@/lib/guide-product'
 
 type Props = {
   amountCents?: number
@@ -9,8 +10,8 @@ type Props = {
 }
 
 export default function StartCheckoutButton({
-  amountCents = 2999,
-  productName = 'The Makeup Guide',
+  amountCents = GUIDE_PRODUCT.priceCents,
+  productName = GUIDE_PRODUCT.title,
   email,
   name,
 }: Props){
@@ -41,7 +42,7 @@ export default function StartCheckoutButton({
         disabled={loading}
         className="gbtn w-full h-12 rounded-[var(--radius-xl)] grid place-items-center font-medium"
       >
-        {loading ? 'Redirecting…' : 'Pay $29.99'}
+        {loading ? 'Redirecting…' : `Pay ${formatGuidePrice(amountCents)}`}
       </button>
     </div>
   )

@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
+import { GUIDE_PRODUCT } from '@/lib/guide-product'
 
 export async function POST(req: Request){
   if(!stripe) return NextResponse.json({ error:'Stripe not configured' }, { status:400 })
   const { email, name, slug } = await req.json()
   const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const priceId = process.env.STRIPE_PRICE_GUIDE
-  const amount = parseInt(process.env.GUIDE_PRICE_CENTS || '2999', 10)
+  const amount = parseInt(process.env.GUIDE_PRICE_CENTS || String(GUIDE_PRODUCT.priceCents), 10)
   const params: Stripe.Checkout.SessionCreateParams = {
     mode:'payment',
     success_url: `${origin}/guide/thanks?session_id={CHECKOUT_SESSION_ID}`,
@@ -19,7 +20,7 @@ export async function POST(req: Request){
       price_data: {
         currency: 'usd',
         unit_amount: amount,
-        product_data: { name: 'Makeup Guide' }
+        product_data: { name: GUIDE_PRODUCT.title }
       },
       quantity: 1
     }],

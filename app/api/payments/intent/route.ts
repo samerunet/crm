@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { stripe } from "@/lib/stripe"
+import { GUIDE_PRODUCT } from "@/lib/guide-product"
 
 export async function POST(req: Request){
   try{
@@ -7,7 +8,7 @@ export async function POST(req: Request){
       return NextResponse.json({ error: "Stripe secret key not configured" }, { status: 500 });
     }
     const { product } = await req.json().catch(()=>({}))
-    const amount = 2999
+    const amount = GUIDE_PRODUCT.priceCents
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency:'usd',
