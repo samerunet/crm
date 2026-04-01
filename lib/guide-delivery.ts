@@ -3,7 +3,6 @@ import "server-only";
 import crypto from "node:crypto";
 import path from "node:path";
 
-import { prisma } from "@/lib/prisma";
 import { GUIDE_PRODUCT } from "@/lib/guide-product";
 
 const IS_PROD =
@@ -15,77 +14,57 @@ const APP_URL =
   (IS_PROD ? "https://farimakeup.com" : "http://localhost:3000");
 const DOWNLOAD_SECRET = process.env.STRIPE_SECRET_KEY || "dev-guide-download-secret";
 const EMAIL_DOWNLOAD_LIFETIME_MS = 1000 * 60 * 60 * 24;
-const SESSION_DOWNLOAD_LIFETIME_MS = 1000 * 60 * 20;
+type GuideDownloadTokenPayload = {
+  exp: number;
+  orderId: string;
+  slug: string;
+};
 
-function hashDownloadToken(rawToken: string) {
-  return crypto.createHmac("sha256", DOWNLOAD_SECRET).update(rawToken).digest("hex");
+function toBase64Url(input: string) {
+  return Buffer.from(input, "utf8").toString("base64url");
 }
 
-function signSessionDownload(sessionId: string, expiresAt: number) {
-  return crypto
-    .createHmac("sha256", DOWNLOAD_SECRET)
-    .update(`${sessionId}.${expiresAt}`)
-    .digest("hex");
+function fromBase64Url(input: string) {
+  return Buffer.from(input, "base64url").toString("utf8");
 }
 
-export async function issueGuideDownloadToken(orderId: string) {
-  const rawToken = crypto.randomBytes(32).toString("hex");
-  const guideDownloadTokenHash = hashDownloadToken(rawToken);
-  const guideDownloadExpiresAt = new Date(Date.now() + EMAIL_DOWNLOAD_LIFETIME_MS);
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      guideDownloadTokenHash,
-      guideDownloadExpiresAt,
-      guideDownloadUsedAt: null,
-    },
-  });
-
-  return { rawToken, guideDownloadExpiresAt };
+function signPayload(encodedPayload: string) {
+  return crypto.createHmac("sha256", DOWNLOAD_SECRET).update(encodedPayload).digest("base64url");
 }
 
-export async function findGuideDownloadOrder(rawToken: string) {
-  const guideDownloadTokenHash = hashDownloadToken(rawToken);
-  return prisma.order.findFirst({
-    where: {
-      guideDownloadTokenHash,
-      guideDownloadExpiresAt: { gt: new Date() },
-      guide: { slug: GUIDE_PRODUCT.slug },
-    },
-  });
+export function createGuideDownloadToken(args: { orderId: string; slug?: string }) {
+  const payload: GuideDownloadTokenPayload = {
+    exp: Date.now() + EMAIL_DOWNLOAD_LIFETIME_MS,
+    orderId: args.orderId,
+    slug: args.slug ?? GUIDE_PRODUCT.slug,
+  };
+  const encodedPayload = toBase64Url(JSON.stringify(payload));
+  return `${encodedPayload}.${signPayload(encodedPayload)}`;
 }
 
-export function buildGuideDownloadUrl(rawToken: string) {
-  return `${APP_URL}/api/guides/download?token=${encodeURIComponent(rawToken)}`;
-}
+export function verifyGuideDownloadToken(token: string) {
+  const [encodedPayload, signature] = token.split(".");
+  if (!encodedPayload || !signature) return null;
 
-export function buildGuideSessionDownloadUrl(sessionId: string) {
-  const expiresAt = Date.now() + SESSION_DOWNLOAD_LIFETIME_MS;
-  const sig = signSessionDownload(sessionId, expiresAt);
-  return `${APP_URL}/api/guides/download/session?sessionId=${encodeURIComponent(sessionId)}&expires=${expiresAt}&sig=${sig}`;
-}
-
-export function verifyGuideSessionDownload(args: {
-  expires: string | null;
-  sessionId: string;
-  sig: string | null;
-}) {
-  if (!args.sessionId || !args.expires || !args.sig) {
-    return false;
+  const expectedSignature = signPayload(encodedPayload);
+  if (signature.length !== expectedSignature.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    return null;
   }
 
-  const expiresAt = Number(args.expires);
-  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) {
-    return false;
+  try {
+    const payload = JSON.parse(fromBase64Url(encodedPayload)) as GuideDownloadTokenPayload;
+    if (!payload?.orderId || !payload?.slug || !payload?.exp) return null;
+    if (payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
   }
+}
 
-  const expectedSig = signSessionDownload(args.sessionId, expiresAt);
-  if (args.sig.length !== expectedSig.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(Buffer.from(args.sig), Buffer.from(expectedSig));
+export function buildGuideDownloadUrl(args: { orderId: string; slug?: string }) {
+  const token = createGuideDownloadToken(args);
+  return `${APP_URL}/api/guides/download?token=${encodeURIComponent(token)}`;
 }
 
 export function getGuidePdfAbsolutePath() {

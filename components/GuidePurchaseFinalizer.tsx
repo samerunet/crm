@@ -43,14 +43,7 @@ export default function GuidePurchaseFinalizer({ sessionId }: { sessionId?: stri
   useEffect(() => {
     if (!downloadUrl || downloadedRef.current) return;
     downloadedRef.current = true;
-
-    const anchor = document.createElement("a");
-    anchor.href = downloadUrl;
-    anchor.download = "";
-    anchor.rel = "noopener";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
+    window.location.assign(downloadUrl);
   }, [downloadUrl]);
 
   if (!sessionId) return null;

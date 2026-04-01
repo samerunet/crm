@@ -2,7 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 
-import { buildGuideDownloadUrl, issueGuideDownloadToken } from "@/lib/guide-delivery";
+import { buildGuideDownloadUrl } from "@/lib/guide-delivery";
 import { GUIDE_PRODUCT } from "@/lib/guide-product";
 
 const IS_PROD =
@@ -103,8 +103,7 @@ export async function sendGuideDeliveryEmail(args: {
   const resend = new Resend(RESEND_API_KEY);
   const buyerName = escapeHtml(sanitize(args.buyerName) || "there");
   const guideTitle = escapeHtml(sanitize(args.guideTitle) || GUIDE_PRODUCT.title);
-  const { rawToken } = await issueGuideDownloadToken(args.orderId);
-  const downloadUrl = buildGuideDownloadUrl(rawToken);
+  const downloadUrl = buildGuideDownloadUrl({ orderId: args.orderId });
 
   const html = `
     <div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;line-height:1.6;color:#1b130f">

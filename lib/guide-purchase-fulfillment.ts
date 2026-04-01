@@ -2,7 +2,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 
-import { buildGuideSessionDownloadUrl } from "@/lib/guide-delivery";
+import { buildGuideDownloadUrl } from "@/lib/guide-delivery";
 import { prisma } from "@/lib/prisma";
 import {
   sendGuideDeliveryEmail,
@@ -24,8 +24,6 @@ export async function fulfillGuideCheckoutSession(
   const status = session.payment_status === "paid" ? "COMPLETED" : "PENDING";
   const slug = session.metadata?.slug ?? "makeup-guide";
   const guide = await prisma.guide.findUnique({ where: { slug } });
-  const sessionDownloadUrl =
-    status === "COMPLETED" ? buildGuideSessionDownloadUrl(session.id) : null;
 
   const existingOrder = await prisma.order.findFirst({ where: { externalRef: session.id } });
   if (existingOrder) {
@@ -90,7 +88,8 @@ export async function fulfillGuideCheckoutSession(
       orderId: refreshedOrder.id,
       status: refreshedOrder.status,
       buyerEmail: email || null,
-      downloadUrl: sessionDownloadUrl,
+      downloadUrl:
+        status === "COMPLETED" ? buildGuideDownloadUrl({ orderId: refreshedOrder.id, slug }) : null,
       deliveryEmailId,
       internalEmailId,
     };
@@ -149,7 +148,7 @@ export async function fulfillGuideCheckoutSession(
     orderId: order.id,
     status,
     buyerEmail: email || null,
-    downloadUrl: sessionDownloadUrl,
+    downloadUrl: status === "COMPLETED" ? buildGuideDownloadUrl({ orderId: order.id, slug }) : null,
     deliveryEmailId,
     internalEmailId,
   };

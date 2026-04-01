@@ -2,8 +2,12 @@ import { readFile } from "node:fs/promises";
 
 import { NextResponse } from "next/server";
 
-import { findGuideDownloadOrder, getGuidePdfAbsolutePath } from "@/lib/guide-delivery";
+import {
+  getGuidePdfAbsolutePath,
+  verifyGuideDownloadToken,
+} from "@/lib/guide-delivery";
 import { GUIDE_PRODUCT } from "@/lib/guide-product";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +16,19 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token") || "";
-    const order = token ? await findGuideDownloadOrder(token) : null;
+    const payload = verifyGuideDownloadToken(token);
+
+    if (!payload || payload.slug !== GUIDE_PRODUCT.slug) {
+      return new NextResponse("This download link is invalid or expired.", { status: 403 });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        id: payload.orderId,
+        status: "COMPLETED",
+        guide: { slug: GUIDE_PRODUCT.slug },
+      },
+    });
 
     if (!order) {
       return new NextResponse("This download link is invalid or expired.", { status: 403 });
