@@ -119,6 +119,7 @@ export default function Navbar() {
     () => [
       { href: '/',           label: 'Home' },
       { href: '/services',   label: 'Services' },
+      { href: '/guides',     label: 'Guide' },
       { href: '/portfolio',  label: 'Portfolio' },
       { href: '/reviews',    label: 'Reviews' },
       { href: '/faq',        label: 'FAQ' },

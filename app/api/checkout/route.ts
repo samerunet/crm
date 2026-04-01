@@ -1,5 +1,7 @@
 import Stripe from "stripe";
 
+import { GUIDE_PRODUCT } from "@/lib/guide-product";
+
 export const runtime = "nodejs";
 
 const secret = process.env.STRIPE_SECRET_KEY;
@@ -29,7 +31,8 @@ export async function POST(req: Request) {
 
     const priceId = process.env.STRIPE_PRICE_GUIDE || "";
     const productId = process.env.STRIPE_PRODUCT_GUIDE || "";
-    const amountCents = amountOverride ?? Number(process.env.PRICE_AMOUNT_CENTS || 2999);
+    const amountCents =
+      amountOverride ?? Number(process.env.PRICE_AMOUNT_CENTS || GUIDE_PRODUCT.priceCents);
     const currency = process.env.PRICE_CURRENCY || "usd";
 
     const usingPriceId = priceId.startsWith("price_");
@@ -49,7 +52,7 @@ export async function POST(req: Request) {
             }]
           : [{
               price_data: {
-                product_data: { name: productOverride || "Makeup Guide" },
+                product_data: { name: productOverride || GUIDE_PRODUCT.title },
                 currency,
                 unit_amount: amountCents,
               },
@@ -60,12 +63,12 @@ export async function POST(req: Request) {
       mode: "payment",
       line_items,
       success_url: `${origin}/guide/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/pay/guide?canceled=1`,
+      cancel_url: `${origin}${GUIDE_PRODUCT.checkoutPath}?canceled=1`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
         ...(name ? { customer_name: name } : {}),
-        slug: "makeup-guide",
-        productName: productOverride || "Makeup Guide",
+        slug: GUIDE_PRODUCT.slug,
+        productName: productOverride || GUIDE_PRODUCT.title,
       },
     } as const;
 

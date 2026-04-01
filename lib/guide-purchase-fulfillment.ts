@@ -3,11 +3,14 @@ import "server-only";
 import type Stripe from "stripe";
 
 import { prisma } from "@/lib/prisma";
-import { sendGuidePurchaseNotification } from "@/lib/guide-purchase-notifications";
+import {
+  sendGuideDeliveryEmail,
+  sendGuidePurchaseNotification,
+} from "@/lib/guide-purchase-notifications";
 
 export async function fulfillGuideCheckoutSession(
   session: Stripe.Checkout.Session,
-  options?: { forceNotification?: boolean },
+  options?: { forceEmails?: boolean },
 ) {
   const email = session.customer_details?.email ?? session.customer_email ?? "";
   const name =
@@ -23,10 +26,11 @@ export async function fulfillGuideCheckoutSession(
 
   const existingOrder = await prisma.order.findFirst({ where: { externalRef: session.id } });
   if (existingOrder) {
-    let notificationId: string | null = null;
-    if (status === "COMPLETED" && options?.forceNotification) {
+    let internalEmailId: string | null = null;
+    let deliveryEmailId: string | null = null;
+    if (status === "COMPLETED" && options?.forceEmails) {
       try {
-        const result = await sendGuidePurchaseNotification({
+        const internalResult = await sendGuidePurchaseNotification({
           buyerEmail: email,
           buyerName: name,
           guideTitle: guide?.title ?? session.metadata?.productName ?? "Makeup Guide",
@@ -34,9 +38,20 @@ export async function fulfillGuideCheckoutSession(
           currency,
           sessionId: session.id,
         });
-        notificationId = result.id ?? null;
+        internalEmailId = internalResult.id ?? null;
       } catch (notifyErr: any) {
         console.error("Guide purchase notification replay failed:", notifyErr?.message || notifyErr);
+      }
+      try {
+        const deliveryResult = await sendGuideDeliveryEmail({
+          buyerEmail: email,
+          buyerName: name,
+          guideTitle: guide?.title ?? session.metadata?.productName ?? "Makeup Guide",
+          sessionId: session.id,
+        });
+        deliveryEmailId = deliveryResult.id ?? null;
+      } catch (deliveryErr: any) {
+        console.error("Guide delivery replay failed:", deliveryErr?.message || deliveryErr);
       }
     }
 
@@ -46,7 +61,8 @@ export async function fulfillGuideCheckoutSession(
       orderId: existingOrder.id,
       status: existingOrder.status,
       buyerEmail: email || null,
-      notificationId,
+      deliveryEmailId,
+      internalEmailId,
     };
   }
 
@@ -68,10 +84,11 @@ export async function fulfillGuideCheckoutSession(
     },
   });
 
-  let notificationId: string | null = null;
+  let internalEmailId: string | null = null;
+  let deliveryEmailId: string | null = null;
   if (status === "COMPLETED") {
     try {
-      const result = await sendGuidePurchaseNotification({
+      const internalResult = await sendGuidePurchaseNotification({
         buyerEmail: email,
         buyerName: name,
         guideTitle: guide?.title ?? session.metadata?.productName ?? "Makeup Guide",
@@ -79,9 +96,20 @@ export async function fulfillGuideCheckoutSession(
         currency,
         sessionId: session.id,
       });
-      notificationId = result.id ?? null;
+      internalEmailId = internalResult.id ?? null;
     } catch (notifyErr: any) {
       console.error("Guide purchase notification failed:", notifyErr?.message || notifyErr);
+    }
+    try {
+      const deliveryResult = await sendGuideDeliveryEmail({
+        buyerEmail: email,
+        buyerName: name,
+        guideTitle: guide?.title ?? session.metadata?.productName ?? "Makeup Guide",
+        sessionId: session.id,
+      });
+      deliveryEmailId = deliveryResult.id ?? null;
+    } catch (deliveryErr: any) {
+      console.error("Guide delivery email failed:", deliveryErr?.message || deliveryErr);
     }
   }
 
@@ -91,6 +119,7 @@ export async function fulfillGuideCheckoutSession(
     orderId: order.id,
     status,
     buyerEmail: email || null,
-    notificationId,
+    deliveryEmailId,
+    internalEmailId,
   };
 }

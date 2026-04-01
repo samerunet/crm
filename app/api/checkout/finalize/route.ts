@@ -17,14 +17,14 @@ export async function POST(req: Request) {
       typeof body?.sessionId === "string" && body.sessionId.trim().length
         ? body.sessionId.trim()
         : "";
-    const forceNotification = body?.forceNotification === true;
+    const forceEmails = body?.forceEmails === true;
 
     if (!sessionId) {
       return NextResponse.json({ ok: false, error: "sessionId is required" }, { status: 400 });
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    const result = await fulfillGuideCheckoutSession(session, { forceNotification });
+    const result = await fulfillGuideCheckoutSession(session, { forceEmails });
 
     return NextResponse.json({ ok: true, ...result });
   } catch (err: any) {

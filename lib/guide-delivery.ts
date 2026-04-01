@@ -1,0 +1,78 @@
+import "server-only";
+
+import crypto from "node:crypto";
+import path from "node:path";
+
+import { GUIDE_PRODUCT } from "@/lib/guide-product";
+
+const IS_PROD =
+  process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+const APP_URL =
+  process.env.APP_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (IS_PROD ? "https://farimakeup.com" : "http://localhost:3000");
+const DOWNLOAD_SECRET =
+  process.env.GUIDE_DOWNLOAD_SECRET ||
+  process.env.STRIPE_SECRET_KEY ||
+  "dev-guide-download-secret";
+const DOWNLOAD_LIFETIME_MS = 1000 * 60 * 60 * 24 * 365;
+
+type DownloadTokenPayload = {
+  email: string;
+  exp: number;
+  sessionId: string;
+  slug: string;
+};
+
+function toBase64Url(input: string) {
+  return Buffer.from(input, "utf8").toString("base64url");
+}
+
+function fromBase64Url(input: string) {
+  return Buffer.from(input, "base64url").toString("utf8");
+}
+
+function sign(encodedPayload: string) {
+  return crypto.createHmac("sha256", DOWNLOAD_SECRET).update(encodedPayload).digest("base64url");
+}
+
+export function createGuideDownloadToken(args: { email: string; sessionId: string; slug?: string }) {
+  const payload: DownloadTokenPayload = {
+    email: args.email,
+    exp: Date.now() + DOWNLOAD_LIFETIME_MS,
+    sessionId: args.sessionId,
+    slug: args.slug ?? GUIDE_PRODUCT.slug,
+  };
+
+  const encodedPayload = toBase64Url(JSON.stringify(payload));
+  return `${encodedPayload}.${sign(encodedPayload)}`;
+}
+
+export function verifyGuideDownloadToken(token: string) {
+  const [encodedPayload, signature] = token.split(".");
+  if (!encodedPayload || !signature) return null;
+  const expectedSignature = sign(encodedPayload);
+  if (signature.length !== expectedSignature.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(fromBase64Url(encodedPayload)) as DownloadTokenPayload;
+    if (!payload?.email || !payload?.sessionId || !payload?.slug || !payload?.exp) return null;
+    if (payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function buildGuideDownloadUrl(args: { email: string; sessionId: string; slug?: string }) {
+  const token = createGuideDownloadToken(args);
+  return `${APP_URL}/api/guides/download?token=${encodeURIComponent(token)}`;
+}
+
+export function getGuidePdfAbsolutePath() {
+  return path.join(process.cwd(), GUIDE_PRODUCT.pdfStoragePath);
+}
