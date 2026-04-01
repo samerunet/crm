@@ -82,16 +82,19 @@ model Enrollment {
 }
 
 model Order {
-  id          String   @id @default(cuid())
-  userId      String?
-  guideId     String?
-  amountCents Int
-  currency    String   @default("usd")
-  status      String   @default("PENDING")
-  externalRef String?
-  createdAt   DateTime @default(now())
-  guide       Guide?   @relation(fields: [guideId], references: [id])
-  user        User?    @relation(fields: [userId], references: [id])
+  id                      String    @id @default(cuid())
+  userId                  String?
+  guideId                 String?
+  amountCents             Int
+  currency                String    @default("usd")
+  status                  String    @default("PENDING")
+  externalRef             String?
+  guideDownloadTokenHash  String?   @unique
+  guideDownloadExpiresAt  DateTime?
+  guideDownloadUsedAt     DateTime?
+  createdAt               DateTime  @default(now())
+  guide                   Guide?    @relation(fields: [guideId], references: [id])
+  user                    User?     @relation(fields: [userId], references: [id])
 }
 
 model Lead {

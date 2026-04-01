@@ -2,7 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 
-import { buildGuideDownloadUrl } from "@/lib/guide-delivery";
+import { buildGuideDownloadUrl, issueGuideDownloadToken } from "@/lib/guide-delivery";
 import { GUIDE_PRODUCT } from "@/lib/guide-product";
 
 const IS_PROD =
@@ -85,10 +85,10 @@ export async function sendGuidePurchaseNotification(args: {
 }
 
 export async function sendGuideDeliveryEmail(args: {
+  orderId: string;
   buyerEmail?: string | null;
   buyerName?: string | null;
   guideTitle?: string | null;
-  sessionId: string;
 }) {
   const rawBuyerEmail = sanitize(args.buyerEmail);
   if (!rawBuyerEmail) {
@@ -103,11 +103,8 @@ export async function sendGuideDeliveryEmail(args: {
   const resend = new Resend(RESEND_API_KEY);
   const buyerName = escapeHtml(sanitize(args.buyerName) || "there");
   const guideTitle = escapeHtml(sanitize(args.guideTitle) || GUIDE_PRODUCT.title);
-  const downloadUrl = buildGuideDownloadUrl({
-    email: rawBuyerEmail,
-    sessionId: args.sessionId,
-    slug: GUIDE_PRODUCT.slug,
-  });
+  const { rawToken } = await issueGuideDownloadToken(args.orderId);
+  const downloadUrl = buildGuideDownloadUrl(rawToken);
 
   const html = `
     <div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;line-height:1.6;color:#1b130f">
@@ -119,8 +116,18 @@ export async function sendGuideDeliveryEmail(args: {
           Download your guide
         </a>
       </p>
+      <p><strong>Important:</strong> this email download link works one time only, so open it on the device where you want to keep the file and save the PDF immediately.</p>
+      <p>Recommended steps:</p>
+      <ol style="padding-left:18px">
+        <li>Tap <strong>Download your guide</strong>.</li>
+        <li>Wait for the PDF to finish downloading completely.</li>
+        <li>Save it to Files, Downloads, iCloud Drive, Google Drive, or your desktop.</li>
+        <li>Keep a backup copy for future access.</li>
+      </ol>
       <p>If the button does not open, copy and paste this link into your browser:</p>
       <p><a href="${downloadUrl}">${downloadUrl}</a></p>
+      <p>If the link shows as used or expired before you save the file, reply to this email and we can resend it.</p>
+      <p>Please do not forward this email if you want to keep the download private.</p>
       <p>Thank you,<br />Fari Makeup</p>
     </div>
   `;

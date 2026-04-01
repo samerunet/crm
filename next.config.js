@@ -114,6 +114,7 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   outputFileTracingIncludes: {
     '/api/guides/download': ['./content/guides/**/*'],
+    '/api/guides/download/session': ['./content/guides/**/*'],
   },
   reactStrictMode: true,
   compress: true,

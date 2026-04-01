@@ -78,13 +78,16 @@ export default function GuidePurchaseFinalizer({ sessionId }: { sessionId?: stri
             href={downloadUrl}
             className="inline-flex text-sm underline underline-offset-4"
           >
-            Download the guide again
+            Download the guide now
           </a>
         ) : (
           <p className="text-sm opacity-70">
-            We’re also sending the guide link to your email as a backup.
+            We’re also sending a one-time-use backup link to your email.
           </p>
         )}
+        <p className="text-sm opacity-70">
+          Save the PDF as soon as it opens so you keep a copy on your device.
+        </p>
       </div>
     );
   }
