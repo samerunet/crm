@@ -12,10 +12,7 @@ const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
   (IS_PROD ? "https://farimakeup.com" : "http://localhost:3000");
-const DOWNLOAD_SECRET =
-  process.env.GUIDE_DOWNLOAD_SECRET ||
-  process.env.STRIPE_SECRET_KEY ||
-  "dev-guide-download-secret";
+const DOWNLOAD_SECRET = process.env.STRIPE_SECRET_KEY || "dev-guide-download-secret";
 const DOWNLOAD_LIFETIME_MS = 1000 * 60 * 60 * 24 * 365;
 
 type DownloadTokenPayload = {
