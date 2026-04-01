@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { buildGuideDownloadUrl } from "@/lib/guide-delivery";
-import { GUIDE_PRODUCT } from "@/lib/guide-product";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -20,7 +19,6 @@ export async function GET(req: Request) {
       where: {
         externalRef: sessionId,
         status: "COMPLETED",
-        guide: { slug: GUIDE_PRODUCT.slug },
       },
     });
 

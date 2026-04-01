@@ -23,7 +23,6 @@ export async function GET(req: Request) {
       where: {
         id: payload.orderId,
         status: "COMPLETED",
-        guide: { slug: GUIDE_PRODUCT.slug },
       },
     });
 
