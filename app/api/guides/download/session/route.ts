@@ -2,11 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { NextResponse } from "next/server";
 
-import {
-  getGuidePdfAbsolutePath,
-  getSessionDownloadCutoff,
-  verifyGuideSessionDownload,
-} from "@/lib/guide-delivery";
+import { getGuidePdfAbsolutePath, verifyGuideSessionDownload } from "@/lib/guide-delivery";
 import { GUIDE_PRODUCT } from "@/lib/guide-product";
 import { prisma } from "@/lib/prisma";
 
@@ -31,7 +27,6 @@ export async function GET(req: Request) {
       where: {
         externalRef: sessionId,
         status: "COMPLETED",
-        createdAt: { gt: getSessionDownloadCutoff() },
         guide: { slug: GUIDE_PRODUCT.slug },
       },
     });

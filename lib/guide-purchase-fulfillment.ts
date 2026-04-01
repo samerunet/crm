@@ -29,6 +29,32 @@ export async function fulfillGuideCheckoutSession(
 
   const existingOrder = await prisma.order.findFirst({ where: { externalRef: session.id } });
   if (existingOrder) {
+    const existingNeedsRefresh =
+      existingOrder.status !== status ||
+      existingOrder.amountCents !== amount ||
+      existingOrder.currency !== currency ||
+      (!existingOrder.guideId && !!guide?.id) ||
+      (!existingOrder.userId && !!email);
+    const existingUser =
+      existingNeedsRefresh && email
+        ? await prisma.user.upsert({
+            where: { email },
+            create: { email, name },
+            update: { name: name ?? undefined },
+          })
+        : null;
+    const refreshedOrder = existingNeedsRefresh
+      ? await prisma.order.update({
+          where: { id: existingOrder.id },
+          data: {
+            amountCents: amount,
+            currency,
+            guideId: existingOrder.guideId ?? guide?.id,
+            status,
+            userId: existingOrder.userId ?? existingUser?.id,
+          },
+        })
+      : existingOrder;
     let internalEmailId: string | null = null;
     let deliveryEmailId: string | null = null;
     if (status === "COMPLETED" && options?.forceEmails) {
@@ -61,8 +87,8 @@ export async function fulfillGuideCheckoutSession(
     return {
       ok: true as const,
       duplicate: true as const,
-      orderId: existingOrder.id,
-      status: existingOrder.status,
+      orderId: refreshedOrder.id,
+      status: refreshedOrder.status,
       buyerEmail: email || null,
       downloadUrl: sessionDownloadUrl,
       deliveryEmailId,

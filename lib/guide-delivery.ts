@@ -88,10 +88,6 @@ export function verifyGuideSessionDownload(args: {
   return crypto.timingSafeEqual(Buffer.from(args.sig), Buffer.from(expectedSig));
 }
 
-export function getSessionDownloadCutoff() {
-  return new Date(Date.now() - SESSION_DOWNLOAD_LIFETIME_MS);
-}
-
 export function getGuidePdfAbsolutePath() {
   return path.join(process.cwd(), GUIDE_PRODUCT.pdfStoragePath);
 }
