@@ -14,7 +14,7 @@ const APP_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (IS_PROD ? "https://farimakeup.com" : "http://localhost:3000");
 const DOWNLOAD_SECRET = process.env.STRIPE_SECRET_KEY || "dev-guide-download-secret";
-const EMAIL_DOWNLOAD_LIFETIME_MS = 1000 * 60 * 60 * 24 * 30;
+const EMAIL_DOWNLOAD_LIFETIME_MS = 1000 * 60 * 60 * 24;
 const SESSION_DOWNLOAD_LIFETIME_MS = 1000 * 60 * 20;
 
 function hashDownloadToken(rawToken: string) {
@@ -45,39 +45,15 @@ export async function issueGuideDownloadToken(orderId: string) {
   return { rawToken, guideDownloadExpiresAt };
 }
 
-export async function consumeGuideDownloadToken(rawToken: string) {
+export async function findGuideDownloadOrder(rawToken: string) {
   const guideDownloadTokenHash = hashDownloadToken(rawToken);
-  const order = await prisma.order.findFirst({
+  return prisma.order.findFirst({
     where: {
       guideDownloadTokenHash,
       guideDownloadExpiresAt: { gt: new Date() },
-      guideDownloadUsedAt: null,
       guide: { slug: GUIDE_PRODUCT.slug },
     },
   });
-
-  if (!order) {
-    return null;
-  }
-
-  const consumed = await prisma.order.updateMany({
-    where: {
-      id: order.id,
-      guideDownloadTokenHash,
-      guideDownloadUsedAt: null,
-    },
-    data: {
-      guideDownloadUsedAt: new Date(),
-      guideDownloadTokenHash: null,
-      guideDownloadExpiresAt: null,
-    },
-  });
-
-  if (consumed.count !== 1) {
-    return null;
-  }
-
-  return order;
 }
 
 export function buildGuideDownloadUrl(rawToken: string) {

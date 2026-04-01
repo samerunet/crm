@@ -82,7 +82,7 @@ export default function GuidePurchaseFinalizer({ sessionId }: { sessionId?: stri
           </a>
         ) : (
           <p className="text-sm opacity-70">
-            We’re also sending a one-time-use backup link to your email.
+            We’re also sending a 24-hour backup link to your email.
           </p>
         )}
         <p className="text-sm opacity-70">

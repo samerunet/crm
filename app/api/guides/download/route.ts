@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { NextResponse } from "next/server";
 
-import { consumeGuideDownloadToken, getGuidePdfAbsolutePath } from "@/lib/guide-delivery";
+import { findGuideDownloadOrder, getGuidePdfAbsolutePath } from "@/lib/guide-delivery";
 import { GUIDE_PRODUCT } from "@/lib/guide-product";
 
 export const runtime = "nodejs";
@@ -12,12 +12,10 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token") || "";
-    const order = token ? await consumeGuideDownloadToken(token) : null;
+    const order = token ? await findGuideDownloadOrder(token) : null;
 
     if (!order) {
-      return new NextResponse("This download link is invalid, expired, or already used.", {
-        status: 403,
-      });
+      return new NextResponse("This download link is invalid or expired.", { status: 403 });
     }
 
     const file = await readFile(getGuidePdfAbsolutePath());
