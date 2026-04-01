@@ -19,6 +19,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.DEV_ALLOW_INSECURE_TLS 
 
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { sendGuidePurchaseNotification } from '@/lib/guide-purchase-notifications';
 
 export const runtime = 'nodejs';
 // Prevent any caching of API results
@@ -139,7 +140,7 @@ export async function GET(req: Request) {
 
   return ok({
     message:
-      'POST JSON: { name, email?, phone?, service?, date?, location?, partySize?, addOns?, notes?, message? }',
+      'POST JSON: either { name, email?, phone?, service?, date?, location?, partySize?, addOns?, notes?, message? } or { kind:"guide-purchase-test", buyerEmail?, buyerName?, guideTitle?, amountCents?, currency?, sessionId? }',
   });
 }
 
@@ -159,6 +160,48 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}));
+
+    if (sanitize((body as any)?.kind) === 'guide-purchase-test') {
+      const buyerEmail = sanitize((body as any)?.buyerEmail) ?? sanitize((body as any)?.email);
+      const buyerName =
+        sanitize((body as any)?.buyerName) ?? sanitize((body as any)?.name) ?? 'Test Buyer';
+      const guideTitle =
+        sanitize((body as any)?.guideTitle) ??
+        sanitize((body as any)?.productName) ??
+        'Makeup Guide';
+      const rawAmount =
+        typeof (body as any)?.amountCents === 'number'
+          ? (body as any).amountCents
+          : Number((body as any)?.amountCents ?? 2999);
+      const amountCents =
+        Number.isFinite(rawAmount) && rawAmount > 0 ? Math.round(rawAmount) : 2999;
+      const currency = (sanitize((body as any)?.currency) ?? 'usd').toLowerCase();
+      const sessionId =
+        sanitize((body as any)?.sessionId) ?? `test_session_${Date.now()}`;
+
+      const result = await sendGuidePurchaseNotification({
+        buyerEmail,
+        buyerName,
+        guideTitle,
+        amountCents,
+        currency,
+        sessionId,
+      });
+
+      return ok({
+        id: result.id ?? null,
+        type: 'guide-purchase-test',
+        payload: {
+          buyerEmail: buyerEmail ?? null,
+          buyerName,
+          guideTitle,
+          amountCents,
+          currency,
+          sessionId,
+        },
+      });
+    }
+
     const { to, name, email, phone, service, date, location, partySize, addOns, notes, message } =
       body || {};
 

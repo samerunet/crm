@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
+import { useState } from "react";
+import type { Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 
 function Form() {
@@ -44,17 +44,11 @@ function Form() {
 
 export default function GuidePaymentForm({
   clientSecret,
-  publishableKey,
+  stripe,
 }: {
   clientSecret: string;
-  publishableKey: string;
+  stripe: Stripe;
 }) {
-  const stripePromise = useMemo(() => (publishableKey ? loadStripe(publishableKey) : null), [publishableKey]);
-
-  if (!publishableKey || !stripePromise) {
-    return <div className="opacity-80 text-sm">Stripe publishable key missing.</div>;
-  }
-
   const options = {
     clientSecret,
     appearance: {
@@ -69,7 +63,7 @@ export default function GuidePaymentForm({
   } as const;
 
   return (
-    <Elements stripe={stripePromise} options={options}>
+    <Elements stripe={stripe} options={options}>
       <Form />
     </Elements>
   );

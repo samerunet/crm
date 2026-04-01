@@ -1,21 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import GuidePaymentForm from "@/components/GuidePaymentForm";
 
 const buildTimePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
 
 export default function CheckoutForm() {
   const [publishableKey, setPublishableKey] = useState<string | null>(buildTimePublishableKey);
+  const [stripe, setStripe] = useState<Stripe | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
-
-  const stripePromise = useMemo(() => {
-    if (!publishableKey) return null;
-    return loadStripe(publishableKey);
-  }, [publishableKey]);
 
   useEffect(() => {
     let active = true;
@@ -44,6 +41,20 @@ export default function CheckoutForm() {
 
         if (active) {
           setPublishableKey(resolvedKey);
+        }
+
+        const stripeInstance = await loadStripe(resolvedKey).catch((stripeErr) => {
+          throw stripeErr instanceof Error
+            ? stripeErr
+            : new Error("Failed to load Stripe.js");
+        });
+
+        if (!stripeInstance) {
+          throw new Error("Failed to load Stripe.js");
+        }
+
+        if (active) {
+          setStripe(stripeInstance);
         }
 
         const intentRes = await fetch("/api/payments/intent", {
@@ -75,20 +86,36 @@ export default function CheckoutForm() {
     };
   }, []);
 
+  const checkoutFallback = (
+    <div className="space-y-3">
+      <p className="text-sm opacity-80">
+        Try the hosted Stripe Checkout page instead if embedded checkout cannot load in this browser.
+      </p>
+      <Link
+        href="/pay/guide"
+        className="gbtn inline-flex h-11 items-center justify-center rounded-[var(--radius-xl)] px-5 font-medium"
+      >
+        Open hosted checkout
+      </Link>
+    </div>
+  );
+
   if (configError) {
     return (
       <div className="liquid-card space-y-3 p-5 text-sm opacity-85">
         <p className="text-base font-semibold text-[--color-foreground]">Stripe not configured</p>
         <p>{configError}</p>
+        {checkoutFallback}
       </div>
     );
   }
 
-  if (!publishableKey || !stripePromise) {
+  if (!publishableKey) {
     return (
       <div className="liquid-card space-y-3 p-5 text-sm opacity-85">
         <p className="text-base font-semibold text-[--color-foreground]">Stripe not configured</p>
         <p>Add <code className="mx-1 rounded bg-card/60 px-1 py-0.5 text-xs">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to your environment.</p>
+        {checkoutFallback}
       </div>
     );
   }
@@ -98,11 +125,12 @@ export default function CheckoutForm() {
       <div className="liquid-card space-y-3 p-5 text-sm text-red-600">
         <p className="text-base font-semibold">Checkout unavailable</p>
         <p>{error}</p>
+        {checkoutFallback}
       </div>
     );
   }
 
-  if (!clientSecret) {
+  if (!stripe || !clientSecret) {
     return <div className="liquid-card p-5 text-sm opacity-80">Loading secure checkout…</div>;
   }
 
@@ -114,7 +142,7 @@ export default function CheckoutForm() {
           Card details are encrypted and processed by Stripe. Apple Pay / Google Pay appear automatically when available.
         </p>
       </div>
-      <GuidePaymentForm clientSecret={clientSecret} publishableKey={publishableKey} />
+      <GuidePaymentForm clientSecret={clientSecret} stripe={stripe} />
     </div>
   );
 }
