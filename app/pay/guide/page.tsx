@@ -45,7 +45,7 @@ export default async function Page({
               </div>
             ) : null}
             <div className="mb-4 text-sm opacity-80">
-              After successful payment, we’ll email your guide download link automatically.
+              After successful payment, you’ll return to a confirmation page and we’ll receive your order details.
             </div>
             <StartCheckoutButton
               amountCents={GUIDE_PRODUCT.priceCents}
