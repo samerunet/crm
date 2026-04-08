@@ -10,6 +10,7 @@ export async function createCheckoutSession(args:{email:string,name?:string,slug
   }
   const session = await stripe.checkout.sessions.create({
     mode:'payment',
+    allow_promotion_codes: true,
     payment_method_types:['card'],
     line_items:[{ price: priceId || process.env.STRIPE_PRICE_GUIDE!, quantity:1 }],
     customer_email: email,

@@ -61,6 +61,7 @@ export async function POST(req: Request) {
 
     const sessionPayload = {
       mode: "payment",
+      allow_promotion_codes: true,
       line_items,
       success_url: `${origin}/guide/thanks?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}${GUIDE_PRODUCT.checkoutPath}?canceled=1`,
