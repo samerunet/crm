@@ -21,7 +21,7 @@ export const GUIDE_PRODUCT = {
   includes: [
     "53-page digital PDF",
     "Kit-building guidance you can reference anytime",
-    "Instant email delivery after successful payment",
+    "Automatic download on the thank-you page plus a backup email link",
   ],
 } as const;
 
